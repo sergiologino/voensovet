@@ -9,8 +9,9 @@ import { BenefitsPage } from './pages/BenefitsPage';
 import { ComplaintsPage } from './pages/ComplaintsPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
 import { ReturnToLifePage } from './pages/ReturnToLifePage';
+import { RegionProvider } from './context/RegionContext';
 
-export function App() {
+function AppContent() {
   // Simple routing simulation
   // In production, use React Router
   const [currentPage, setCurrentPage] = useState('home');
@@ -57,4 +58,12 @@ export function App() {
   };
 
   return pages[currentPage] || <HomePage />;
+}
+
+export function App() {
+  return (
+    <RegionProvider>
+      <AppContent />
+    </RegionProvider>
+  );
 }

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { MenuIcon, XIcon, UserIcon } from 'lucide-react';
+import { MenuIcon, XIcon, UserIcon, MapPinIcon, ChevronDownIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useRegionContext } from '../../context/RegionContext';
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { region, isLoading, openSelector } = useRegionContext();
+
   const navigation = [
     { name: 'Главная', href: '#' },
     { name: 'Помощь', href: '#help' },
@@ -35,10 +39,23 @@ export function Header() {
           </nav>
 
           {/* Right Actions */}
-          <div className="hidden lg:flex items-center gap-4">
-            <select className="px-3 py-2 text-sm border-2 border-[#d4d4d4] rounded-lg bg-white text-[#404040] focus:outline-none focus:border-[#2c5f8d]">
-              <option>RU</option>
-            </select>
+          <div className="hidden lg:flex items-center gap-3">
+            {/* Region Selector */}
+            <button
+              onClick={openSelector}
+              className="flex items-center gap-2 px-3 py-2 text-sm border-2 border-[#d4d4d4] rounded-lg bg-white text-[#404040] hover:border-[#2c5f8d] hover:bg-[#f0f4f8] transition-colors"
+            >
+              <MapPinIcon size={16} className="text-[#2c5f8d]" />
+              {isLoading ? (
+                <span className="text-[#a3a3a3]">Определение...</span>
+              ) : region ? (
+                <span className="max-w-[150px] truncate">{region.name}</span>
+              ) : (
+                <span className="text-[#737373]">Выбрать регион</span>
+              )}
+              <ChevronDownIcon size={14} className="text-[#737373]" />
+            </button>
+
             <Button variant="ghost" size="sm">
               <UserIcon size={18} className="mr-2" />
               Войти
@@ -57,11 +74,25 @@ export function Header() {
               {navigation.map(item => <a key={item.name} href={item.href} className="px-4 py-3 text-base text-[#404040] hover:bg-[#f0f4f8] rounded-lg">
                   {item.name}
                 </a>)}
+              {/* Mobile Region Selector */}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openSelector();
+                }}
+                className="flex items-center gap-2 px-4 py-3 text-base text-[#404040] hover:bg-[#f0f4f8] rounded-lg w-full"
+              >
+                <MapPinIcon size={18} className="text-[#2c5f8d]" />
+                {isLoading ? (
+                  <span className="text-[#a3a3a3]">Определение...</span>
+                ) : region ? (
+                  <span>{region.name}</span>
+                ) : (
+                  <span className="text-[#737373]">Выбрать регион</span>
+                )}
+              </button>
               <div className="flex items-center gap-4 px-4 py-3">
-                <select className="flex-1 px-3 py-2 text-sm border-2 border-[#d4d4d4] rounded-lg bg-white">
-                  <option>RU</option>
-                </select>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="flex-1">
                   <UserIcon size={18} className="mr-2" />
                   Войти
                 </Button>
