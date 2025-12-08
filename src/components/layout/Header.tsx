@@ -3,22 +3,14 @@ import { MenuIcon, XIcon, UserIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigation = [{
-    name: 'Помощь',
-    href: '#help'
-  }, {
-    name: 'Права и льготы',
-    href: '#benefits'
-  }, {
-    name: 'Возвращение к жизни',
-    href: '#return'
-  }, {
-    name: 'Жалобы',
-    href: '#complaints'
-  }, {
-    name: 'Организации',
-    href: '#organizations'
-  }];
+  const navigation = [
+    { name: 'Главная', href: '#' },
+    { name: 'Помощь', href: '#help' },
+    { name: 'Права и льготы', href: '#benefits' },
+    { name: 'Возвращение к жизни', href: '#return' },
+    { name: 'Жалобы', href: '#complaints' },
+    { name: 'Организации', href: '#organizations' },
+  ];
   return <header className="bg-white border-b-2 border-[#e5e5e5] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">

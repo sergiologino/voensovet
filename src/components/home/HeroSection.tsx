@@ -1,20 +1,25 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { PhoneIcon } from 'lucide-react';
+
 export function HeroSection() {
-  const userTypes = [{
-    title: 'Я вернулся(лась) из зоны боевых действий',
-    description: 'Помощь в адаптации, права и льготы для военнослужащих',
-    href: '#veteran'
-  }, {
-    title: 'Я член семьи',
-    description: 'Поддержка для родственников военнослужащих',
-    href: '#family'
-  }, {
-    title: 'Я из семьи погибшего',
-    description: 'Помощь и поддержка семьям погибших',
-    href: '#bereaved'
-  }];
+  const userTypes = [
+    {
+      title: 'Я вернулся(лась) из зоны боевых действий',
+      description: 'Помощь в адаптации, права и льготы для военнослужащих',
+      href: '#veteran',
+    },
+    {
+      title: 'Я член семьи',
+      description: 'Поддержка для родственников военнослужащих',
+      href: '#family',
+    },
+    {
+      title: 'Я из семьи погибшего',
+      description: 'Помощь и поддержка семьям погибших',
+      href: '#bereaved',
+    },
+  ];
   return <section className="relative py-16 lg:py-24 overflow-hidden">
       {/* Background Image with Blur */}
       <div className="absolute inset-0 bg-cover bg-center" style={{
@@ -61,7 +66,7 @@ export function HeroSection() {
             Если вам нужна немедленная поддержка, мы поможем найти специалистов
             и организации, которые работают прямо сейчас
           </p>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" onClick={() => window.location.href = '#help'}>
             Получить помощь сейчас
           </Button>
         </div>
