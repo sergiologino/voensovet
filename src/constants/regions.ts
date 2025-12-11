@@ -144,3 +144,4 @@ export const searchRegions = (query: string): Region[] => {
     r.name.toLowerCase().includes(lowerQuery)
   );
 };
+

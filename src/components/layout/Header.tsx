@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { MenuIcon, XIcon, UserIcon, MapPinIcon, ChevronDownIcon } from 'lucide-react';
+import { Menu, X, UserIcon, MapPinIcon, ChevronDownIcon, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useRegionContext } from '../../context/RegionContext';
+import { useAuth } from '../../context/AuthContext';
+import { Login } from '../auth/Login';
+import { Register } from '../auth/Register';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const { region, isLoading, openSelector } = useRegionContext();
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Главная', href: '#' },
@@ -56,15 +62,35 @@ export function Header() {
               <ChevronDownIcon size={14} className="text-[#737373]" />
             </button>
 
-            <Button variant="ghost" size="sm">
-              <UserIcon size={18} className="mr-2" />
-              Войти
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => window.location.hash = user.isAdmin ? '#admin' : '#profile'}
+                >
+                  <UserIcon size={18} className="mr-2" />
+                  {user.fullName || user.phone || 'Профиль'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={logout}
+                >
+                  <LogOut size={18} />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => setShowLogin(true)}>
+                <UserIcon size={18} className="mr-2" />
+                Войти
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <button className="lg:hidden p-2 text-[#404040] hover:bg-[#f5f5f5] rounded-lg" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <XIcon size={24} /> : <MenuIcon size={24} />}
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
@@ -92,13 +118,68 @@ export function Header() {
                 )}
               </button>
               <div className="flex items-center gap-4 px-4 py-3">
-                <Button variant="ghost" size="sm" className="flex-1">
-                  <UserIcon size={18} className="mr-2" />
-                  Войти
-                </Button>
+                {user ? (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        window.location.hash = user.isAdmin ? '#admin' : '#profile';
+                      }}
+                    >
+                      <UserIcon size={18} className="mr-2" />
+                      {user.fullName || user.phone || 'Профиль'}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                      }}
+                    >
+                      <LogOut size={18} />
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowLogin(true);
+                    }}
+                  >
+                    <UserIcon size={18} className="mr-2" />
+                    Войти
+                  </Button>
+                )}
               </div>
             </nav>
           </div>}
       </div>
+
+      {showLogin && (
+        <Login 
+          onClose={() => setShowLogin(false)} 
+          onSwitchToRegister={() => {
+            setShowLogin(false);
+            setShowRegister(true);
+          }}
+        />
+      )}
+
+      {showRegister && (
+        <Register 
+          onClose={() => setShowRegister(false)} 
+          onSwitchToLogin={() => {
+            setShowRegister(false);
+            setShowLogin(true);
+          }}
+        />
+      )}
     </header>;
 }

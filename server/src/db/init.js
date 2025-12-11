@@ -1,0 +1,114 @@
+import pg from 'pg';
+
+const { Pool } = pg;
+
+export const pool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'voensovet_db',
+  user: process.env.DB_USER || 'voensovet_user',
+  password: process.env.DB_PASSWORD || 'voensovet_password',
+});
+
+export async function initDatabase() {
+  try {
+    // Проверяем подключение
+    await pool.query('SELECT NOW()');
+    console.log('✅ Database connected');
+
+    // Создаем таблицы если их нет
+    await createTables();
+    console.log('✅ Database tables initialized');
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+    throw error;
+  }
+}
+
+async function createTables() {
+  // Таблица пользователей
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      phone VARCHAR(20) UNIQUE,
+      email VARCHAR(255) UNIQUE,
+      password_hash VARCHAR(255),
+      full_name VARCHAR(255),
+      is_admin BOOLEAN DEFAULT FALSE,
+      yandex_id VARCHAR(255) UNIQUE,
+      provider VARCHAR(50) DEFAULT 'local',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица сессий
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(500) UNIQUE NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица истории запросов пользователя (куда ходил)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      page_url VARCHAR(500),
+      page_title VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица AI запросов
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      primary_prompt TEXT,
+      primary_response TEXT,
+      secondary_prompt TEXT,
+      secondary_response TEXT,
+      network_used VARCHAR(255),
+      tokens_used INTEGER,
+      execution_time_ms INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица настроек админа (промпты)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) UNIQUE NOT NULL,
+      value TEXT,
+      updated_by INTEGER REFERENCES users(id),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Создаем индексы для производительности
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_user_requests_user_id ON user_requests(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_requests_created_at ON user_requests(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_requests_user_id ON ai_requests(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_requests_created_at ON ai_requests(created_at);
+  `);
+
+  // Вставляем дефолтные настройки админа если их нет
+  await pool.query(`
+    INSERT INTO admin_settings (key, value)
+    VALUES 
+      ('primary_prompt', 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы. Ответ должен быть кратким и структурированным.'),
+      ('secondary_prompt', 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ, учитывая контекст и специфику вопроса.')
+    ON CONFLICT (key) DO NOTHING
+  `);
+}
+
