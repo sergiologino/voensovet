@@ -49,3 +49,5 @@ VITE_API_URL=https://your-backend-domain.com
 • Все переменные устанавливаются на сервере, не в .env файлах
 • Подробности: см. ENVIRONMENT_VARIABLES.md
 
+
+

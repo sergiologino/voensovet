@@ -14,6 +14,7 @@ import { AdminPage } from './pages/AdminPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { RegionProvider } from './context/RegionContext';
 import { AuthProvider } from './context/AuthContext';
+import { PageTracker } from './components/PageTracker';
 
 function AppContent() {
   // Simple routing simulation
@@ -81,6 +82,7 @@ export function App() {
   return (
     <AuthProvider>
       <RegionProvider>
+        <PageTracker />
         <AppContent />
       </RegionProvider>
     </AuthProvider>
