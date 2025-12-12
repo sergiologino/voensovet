@@ -9,7 +9,7 @@ import { api } from '../api/client';
 import { SEO } from '../components/seo/SEO';
 import { MarkdownRenderer } from '../components/ai/MarkdownRenderer';
 import arialFont from '../utils/fonts/arial-normal';
-import { UserIcon, History, Settings, Bot, Copy, Download, Check } from 'lucide-react';
+import { UserIcon, History, Settings, Bot, Copy, Download, Check, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -36,6 +36,7 @@ export function ProfilePage() {
   const [loadingAiHistory, setLoadingAiHistory] = useState(false);
   const [selectedAiRequests, setSelectedAiRequests] = useState<Set<number>>(new Set());
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [openedRequestId, setOpenedRequestId] = useState<number | null>(null); // Для аккордеона
 
 
   useEffect(() => {
@@ -412,7 +413,7 @@ export function ProfilePage() {
               }`}
             >
               <Bot size={18} className="inline mr-2" />
-              AI запросы
+              Запросы Комбату
             </button>
           </div>
         </div>
@@ -615,25 +616,42 @@ export function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Question */}
-                      <div className="mb-4">
-                        <div className="text-sm font-semibold text-[#737373] mb-2">Вопрос:</div>
-                        <div className="text-[#404040] bg-[#fafafa] border border-[#e5e5e5] rounded-lg p-3">
-                          {req.primary_prompt || 'Нет вопроса'}
-                        </div>
+                      {/* Question - кликабельный для аккордеона */}
+                      <div className="mb-2">
+                        <button
+                          onClick={() => {
+                            // Если кликнули на уже открытый вопрос - закрываем, иначе открываем новый
+                            setOpenedRequestId(openedRequestId === req.id ? null : req.id);
+                          }}
+                          className="w-full text-left"
+                        >
+                          <div className="text-sm font-semibold text-[#737373] mb-2">Вопрос:</div>
+                          <div className="text-[#404040] bg-[#fafafa] border border-[#e5e5e5] rounded-lg p-3 hover:bg-[#f0f0f0] transition-colors cursor-pointer flex items-center justify-between">
+                            <span className="flex-1">{req.primary_prompt || 'Нет вопроса'}</span>
+                            <span className="ml-2 text-[#2c5f8d]">
+                              {openedRequestId === req.id ? (
+                                <ChevronDown size={20} />
+                              ) : (
+                                <ChevronRight size={20} />
+                              )}
+                            </span>
+                          </div>
+                        </button>
                       </div>
 
-                      {/* Answer */}
-                      <div>
-                        <div className="text-sm font-semibold text-[#737373] mb-2">Ответ:</div>
-                        <div className="text-[#404040] bg-[#f0f4f8] border border-[#2c5f8d] rounded-lg p-4">
-                          {req.secondary_response ? (
-                            <MarkdownRenderer content={req.secondary_response} />
-                          ) : (
-                            <span className="text-[#a3a3a3]">Нет ответа</span>
-                          )}
+                      {/* Answer - показывается только если запрос открыт */}
+                      {openedRequestId === req.id && (
+                        <div className="mt-3 animate-fadeIn">
+                          <div className="text-sm font-semibold text-[#737373] mb-2">Ответ:</div>
+                          <div className="text-[#404040] bg-[#f0f4f8] border border-[#2c5f8d] rounded-lg p-4">
+                            {req.secondary_response ? (
+                              <MarkdownRenderer content={req.secondary_response} />
+                            ) : (
+                              <span className="text-[#a3a3a3]">Нет ответа</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
