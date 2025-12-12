@@ -102,13 +102,6 @@ export function ProfilePage() {
       const { jsPDF } = await import('jspdf');
       const html2canvas = (await import('html2canvas')).default;
       
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-      
       const requestsToExport = requestIds 
         ? aiRequests.filter(r => requestIds.includes(r.id))
         : aiRequests;
@@ -118,190 +111,186 @@ export function ProfilePage() {
         return;
       }
 
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      const footerHeight = 15;
-      const headerHeight = 20;
-      let yPosition = headerHeight + 10;
-      const lineHeight = 6;
-      const maxWidth = pageWidth - 2 * margin;
+      setMessage({ type: 'success', text: 'Генерация PDF... Это может занять некоторое время.' });
 
-      // Функция для добавления колонтитулов
-      const addHeaderFooter = (pageNum: number, totalPages: number, requestTitle?: string) => {
-        // Верхний колонтитул
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(115, 115, 115); // #737373
-        // Используем латиницу для колонтитулов, чтобы избежать проблем с кодировкой
-        doc.text('Portal Podderzhki Voennosluzhashchih', margin, 10);
-        doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
-        
-        // Нижний колонтитул
-        doc.setFontSize(9);
-        if (requestTitle) {
-          const titleText = requestTitle.length > 60 ? requestTitle.substring(0, 60) + '...' : requestTitle;
-          // Транслитерация для нижнего колонтитула
-          const translitTitle = titleText
-            .replace(/[а-яё]/gi, (char) => {
-              const map: Record<string, string> = {
-                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
-                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
-              };
-              return map[char.toLowerCase()] || char;
-            });
-          doc.text(`Topic: ${translitTitle}`, margin, pageHeight - 5);
-        }
-        doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
-      };
+      // Создаем временный контейнер для рендеринга
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.width = '210mm'; // A4 width
+      container.style.padding = '20mm';
+      container.style.fontFamily = 'Arial, sans-serif';
+      container.style.fontSize = '12px';
+      container.style.color = '#262626';
+      container.style.backgroundColor = '#ffffff';
+      document.body.appendChild(container);
 
-      // Подсчитываем общее количество страниц (приблизительно)
-      let estimatedPages = 1;
-      requestsToExport.forEach(req => {
-        const question = req.primary_prompt || 'Нет вопроса';
-        const answer = req.secondary_response || 'Нет ответа';
-        const contentLength = question.length + answer.length;
-        estimatedPages += Math.ceil(contentLength / 2000); // Примерно 2000 символов на страницу
-      });
-
-      let currentPage = 1;
-      addHeaderFooter(currentPage, estimatedPages);
+      // Создаем HTML контент для каждого запроса
+      let htmlContent = `
+        <div style="margin-bottom: 30px;">
+          <div style="font-size: 18px; font-weight: bold; color: #2c5f8d; margin-bottom: 10px;">
+            Портал Поддержки Военнослужащих
+          </div>
+          <div style="font-size: 10px; color: #737373; margin-bottom: 20px;">
+            https://sergiologino-voensovet-1e9f.twc1.net | Экспорт от ${new Date().toLocaleDateString('ru-RU')}
+          </div>
+      `;
 
       requestsToExport.forEach((req, index) => {
         const question = req.primary_prompt || 'Нет вопроса';
         const fullAnswer = req.secondary_response || 'Нет ответа';
-        
-        // Получаем тему из вопроса (первые 50 символов)
-        const requestTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
-        
-        // Проверяем, нужна ли новая страница
-        if (yPosition > pageHeight - footerHeight - 30) {
-          currentPage++;
-          doc.addPage();
-          addHeaderFooter(currentPage, estimatedPages, requestTitle);
-          yPosition = headerHeight + 10;
-        }
-
-        // Заголовок запроса
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(38, 38, 38); // #262626
-        const requestTitleLines = doc.splitTextToSize(`Запрос #${req.id}`, maxWidth);
-        requestTitleLines.forEach((line: string) => {
-          if (yPosition > pageHeight - footerHeight - 20) {
-            currentPage++;
-            doc.addPage();
-            addHeaderFooter(currentPage, estimatedPages, requestTitle);
-            yPosition = headerHeight + 10;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += lineHeight;
-        });
-        yPosition += 2;
-
-        // Дата и метаданные
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(163, 163, 163); // #a3a3a3
         const date = new Date(req.created_at).toLocaleString('ru-RU');
-        doc.text(`Date: ${date}`, margin, yPosition);
-        if (req.network_used) {
-          doc.text(`Network: ${req.network_used}`, margin + 80, yPosition);
-        }
-        yPosition += lineHeight + 3;
+        const requestTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
 
-        // Вопрос
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(64, 64, 64); // #404040
-        doc.text('Question:', margin, yPosition);
-        yPosition += lineHeight;
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        // Убираем markdown форматирование для PDF
-        const cleanQuestion = question.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '');
-        // Используем правильную кодировку для кириллицы
-        const questionLines = doc.splitTextToSize(cleanQuestion, maxWidth);
-        questionLines.forEach((line: string) => {
-          if (yPosition > pageHeight - footerHeight - 10) {
-            currentPage++;
-            doc.addPage();
-            addHeaderFooter(currentPage, estimatedPages, requestTitle);
-            yPosition = headerHeight + 10;
-          }
-          // Используем правильную кодировку для кириллицы
-          try {
-            doc.text(line, margin, yPosition, { encoding: 'UTF8' });
-          } catch (e) {
-            // Fallback для символов, которые не поддерживаются
-            doc.text(line, margin, yPosition);
-          }
-          yPosition += lineHeight;
-        });
-        yPosition += 4;
+        htmlContent += `
+          <div style="margin-bottom: 40px; page-break-inside: avoid;">
+            <div style="font-size: 14px; font-weight: bold; color: #262626; margin-bottom: 5px;">
+              Запрос #${req.id}
+            </div>
+            <div style="font-size: 9px; color: #a3a3a3; margin-bottom: 15px;">
+              Дата: ${date}${req.network_used ? ` | Сеть: ${req.network_used}` : ''}
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <div style="font-size: 11px; font-weight: bold; color: #404040; margin-bottom: 5px;">Вопрос:</div>
+              <div style="font-size: 10px; color: #404040; background: #fafafa; padding: 10px; border: 1px solid #e5e5e5; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;">
+                ${question.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '')}
+              </div>
+            </div>
+            
+            <div>
+              <div style="font-size: 11px; font-weight: bold; color: #404040; margin-bottom: 5px;">Ответ:</div>
+              <div style="font-size: 10px; color: #404040; background: #f0f4f8; padding: 10px; border: 1px solid #2c5f8d; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;">
+                ${fullAnswer.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
+              </div>
+            </div>
+          </div>
+        `;
 
-        // Ответ
-        doc.setFont('helvetica', 'bold');
-        doc.text('Answer:', margin, yPosition);
-        yPosition += lineHeight;
-        doc.setFont('helvetica', 'normal');
-        
-        // Упрощаем markdown для PDF (убираем форматирование, но сохраняем структуру)
-        let cleanAnswer = fullAnswer
-          .replace(/\*\*/g, '') // Убираем жирный
-          .replace(/\*/g, '') // Убираем курсив
-          .replace(/`([^`]+)`/g, '$1') // Убираем inline код
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Убираем ссылки, оставляем текст
-        
-        const answerLines = doc.splitTextToSize(cleanAnswer, maxWidth);
-        answerLines.forEach((line: string) => {
-          if (yPosition > pageHeight - footerHeight - 10) {
-            currentPage++;
-            doc.addPage();
-            addHeaderFooter(currentPage, estimatedPages, requestTitle);
-            yPosition = headerHeight + 10;
-          }
-          // Используем правильную кодировку для кириллицы
-          try {
-            doc.text(line, margin, yPosition, { encoding: 'UTF8' });
-          } catch (e) {
-            // Fallback для символов, которые не поддерживаются
-            doc.text(line, margin, yPosition);
-          }
-          yPosition += lineHeight;
-        });
-
-        // Разделитель между запросами
-        yPosition += 8;
         if (index < requestsToExport.length - 1) {
-          if (yPosition > pageHeight - footerHeight - 10) {
-            currentPage++;
-            doc.addPage();
-            addHeaderFooter(currentPage, estimatedPages);
-            yPosition = headerHeight + 10;
-          }
-          doc.setDrawColor(229, 229, 229); // #e5e5e5
-          doc.setLineWidth(0.5);
-          doc.line(margin, yPosition, pageWidth - margin, yPosition);
-          yPosition += 12;
+          htmlContent += '<hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;" />';
         }
       });
+
+      htmlContent += '</div>';
+      container.innerHTML = htmlContent;
+
+      // Рендерим HTML в canvas
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      // Удаляем временный контейнер
+      document.body.removeChild(container);
+
+      // Создаем PDF
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const doc = new jsPDF('p', 'mm', 'a4');
       
-      // Обновляем колонтитулы на всех страницах с правильным количеством
+      const pageHeight = doc.internal.pageSize.height;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Добавляем первую страницу
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Добавляем дополнительные страницы если нужно
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        doc.addPage();
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Добавляем колонтитулы на все страницы через canvas
       const totalPages = doc.internal.pages.length - 1;
+      const req = requestsToExport[0];
+      const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 60) : '';
+      
+      // Создаем колонтитулы как изображения
+      const headerContainer = document.createElement('div');
+      headerContainer.style.position = 'absolute';
+      headerContainer.style.left = '-9999px';
+      headerContainer.style.width = '210mm';
+      headerContainer.style.padding = '0 20mm';
+      headerContainer.style.fontFamily = 'Arial, sans-serif';
+      headerContainer.style.fontSize = '10px';
+      headerContainer.style.color = '#737373';
+      headerContainer.style.backgroundColor = 'transparent';
+      headerContainer.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
+          <span>Портал Поддержки Военнослужащих</span>
+          <span>https://sergiologino-voensovet-1e9f.twc1.net</span>
+        </div>
+      `;
+      document.body.appendChild(headerContainer);
+      const headerCanvas = await html2canvas(headerContainer, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
+      document.body.removeChild(headerContainer);
+      
+      const footerContainer = document.createElement('div');
+      footerContainer.style.position = 'absolute';
+      footerContainer.style.left = '-9999px';
+      footerContainer.style.width = '210mm';
+      footerContainer.style.padding = '0 20mm';
+      footerContainer.style.fontFamily = 'Arial, sans-serif';
+      footerContainer.style.fontSize = '9px';
+      footerContainer.style.color = '#737373';
+      footerContainer.style.backgroundColor = 'transparent';
+      footerContainer.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
+          <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
+          <span>Страница 1 из ${totalPages}</span>
+        </div>
+      `;
+      document.body.appendChild(footerContainer);
+      const footerCanvas = await html2canvas(footerContainer, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
+      document.body.removeChild(footerContainer);
+      
+      // Добавляем колонтитулы на все страницы
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        const req = requestsToExport.find((r, idx) => {
-          // Находим запрос для этой страницы (упрощенно)
-          return idx === Math.floor((i - 1) / 2);
-        });
-        const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 50) : undefined;
-        addHeaderFooter(i, totalPages, requestTitle);
+        
+        // Обновляем номер страницы в footer
+        if (i > 1) {
+          const footerContainer2 = document.createElement('div');
+          footerContainer2.style.position = 'absolute';
+          footerContainer2.style.left = '-9999px';
+          footerContainer2.style.width = '210mm';
+          footerContainer2.style.padding = '0 20mm';
+          footerContainer2.style.fontFamily = 'Arial, sans-serif';
+          footerContainer2.style.fontSize = '9px';
+          footerContainer2.style.color = '#737373';
+          footerContainer2.style.backgroundColor = 'transparent';
+          footerContainer2.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
+              <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
+              <span>Страница ${i} из ${totalPages}</span>
+            </div>
+          `;
+          document.body.appendChild(footerContainer2);
+          const footerCanvas2 = await html2canvas(footerContainer2, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
+          document.body.removeChild(footerContainer2);
+          
+          const footerImgWidth = 190;
+          const footerImgHeight = (footerCanvas2.height * footerImgWidth) / footerCanvas2.width;
+          doc.addImage(footerCanvas2.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
+        } else {
+          const footerImgWidth = 190;
+          const footerImgHeight = (footerCanvas.height * footerImgWidth) / footerCanvas.width;
+          doc.addImage(footerCanvas.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
+        }
+        
+        // Верхний колонтитул
+        const headerImgWidth = 190;
+        const headerImgHeight = (headerCanvas.height * headerImgWidth) / headerCanvas.width;
+        doc.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 20, 5, headerImgWidth, headerImgHeight);
       }
+
 
       const fileName = requestIds && requestIds.length === 1
         ? `ai-request-${requestIds[0]}.pdf`

@@ -102,19 +102,21 @@ router.post('/process', async (req, res, next) => {
     // Сортируем по приоритету: меньший приоритет = выше в списке
     const sortedNetworks = networks.sort((a, b) => (a.priority || 999) - (b.priority || 999));
     
-    const minPriorityNetwork = sortedNetworks[0]; // Минимальный приоритет (первый запрос)
-    const maxPriorityNetwork = sortedNetworks[sortedNetworks.length - 1]; // Максимальный приоритет (второй запрос)
+    // Первый запрос - сеть с меньшим приоритетом (например, 90)
+    // Второй запрос - сеть с большим приоритетом (например, 100)
+    const firstNetwork = sortedNetworks[0]; // Меньший приоритет (первый запрос)
+    const secondNetwork = sortedNetworks[sortedNetworks.length - 1]; // Больший приоритет (второй запрос)
 
-    if (!minPriorityNetwork || !maxPriorityNetwork) {
+    if (!firstNetwork || !secondNetwork) {
       throw new Error('Не найдены доступные нейросети');
     }
 
-    console.log(`Используем сети: первая (мин приоритет ${minPriorityNetwork.priority}) - ${minPriorityNetwork.name}, вторая (макс приоритет ${maxPriorityNetwork.priority}) - ${maxPriorityNetwork.name}`);
+    console.log(`Используем сети: первая (приоритет ${firstNetwork.priority}) - ${firstNetwork.name}, вторая (приоритет ${secondNetwork.priority}) - ${secondNetwork.name}`);
 
-    // Первый запрос - анализ запроса пользователя (в сеть с минимальным приоритетом)
+    // Первый запрос - анализ запроса пользователя (в сеть с меньшим приоритетом, например 90)
     const primaryRequest = {
       userId: req.user.id.toString(),
-      networkName: minPriorityNetwork.name,
+      networkName: firstNetwork.name,
       requestType: 'chat',
       payload: {
         messages: [
@@ -130,7 +132,7 @@ router.post('/process', async (req, res, next) => {
       }
     };
 
-    console.log('Отправка первичного запроса в AI (сеть с минимальным приоритетом)...');
+    console.log(`Отправка первичного запроса в AI (сеть с приоритетом ${firstNetwork.priority})...`);
     const primaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       primaryRequest,
@@ -192,10 +194,10 @@ router.post('/process', async (req, res, next) => {
    - URL веб-сайтов
    - Номера статей законов с названиями документов`;
 
-    // Второй запрос - развернутый ответ на основе анализа (в сеть с максимальным приоритетом)
+    // Второй запрос - развернутый ответ на основе анализа (в сеть с большим приоритетом, например 100)
     const secondaryRequest = {
       userId: req.user.id.toString(),
-      networkName: maxPriorityNetwork.name,
+      networkName: secondNetwork.name,
       requestType: 'chat',
       payload: {
         messages: [
@@ -211,7 +213,7 @@ router.post('/process', async (req, res, next) => {
       }
     };
 
-    console.log('Отправка вторичного запроса в AI (сеть с максимальным приоритетом)...');
+    console.log(`Отправка вторичного запроса в AI (сеть с приоритетом ${secondNetwork.priority})...`);
     const secondaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       secondaryRequest,
@@ -322,7 +324,7 @@ router.post('/process', async (req, res, next) => {
         primaryAnalysis,
         `${secondaryPrompt}\n\nАнализ: ${primaryAnalysis}\n\nЗапрос: ${userQuery}`,
         fullAnswer,
-        `${minPriorityNetwork.name} -> ${maxPriorityNetwork.name}`,
+        `${firstNetwork.name} -> ${secondNetwork.name}`,
         (primaryResponse.data.tokensUsed || 0) + (secondaryResponse.data.tokensUsed || 0),
         (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
       ]

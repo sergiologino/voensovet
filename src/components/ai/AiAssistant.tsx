@@ -71,7 +71,7 @@ export function AiAssistant() {
           <Bot className="text-white" size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-[#262626]">AI помощник</h2>
+          <h2 className="text-2xl font-bold text-[#262626]">Нейропомощник Комбат</h2>
           <p className="text-sm text-[#737373]">Задайте вопрос и получите помощь</p>
         </div>
       </div>
@@ -143,7 +143,7 @@ export function AiAssistant() {
             <a href="#profile" className="text-[#2c5f8d] hover:underline">
               Войдите в систему
             </a>
-            {' '}для использования AI помощника
+            {' '}для использования Нейропомощника
           </p>
         )}
       </form>
