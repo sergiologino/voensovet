@@ -138,6 +138,35 @@ export function ProfilePage() {
       const req = requestsToExport[0];
       const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 60) : '';
 
+      // Функция для рисования красной звезды
+      const drawStar = (x: number, y: number, size: number) => {
+        const outerRadius = size / 2;
+        const innerRadius = outerRadius * 0.4;
+        const points = 5;
+        const angle = Math.PI / points;
+        
+        doc.setFillColor(220, 38, 38); // Красный цвет #dc2626
+        doc.setDrawColor(153, 27, 27); // Темно-красный для обводки #991b1b
+        doc.setLineWidth(0.3);
+        
+        let path = '';
+        for (let i = 0; i < points * 2; i++) {
+          const radius = i % 2 === 0 ? outerRadius : innerRadius;
+          const currentAngle = i * angle - Math.PI / 2;
+          const px = x + radius * Math.cos(currentAngle);
+          const py = y + radius * Math.sin(currentAngle);
+          
+          if (i === 0) {
+            path = `M ${px} ${py}`;
+          } else {
+            path += ` L ${px} ${py}`;
+          }
+        }
+        path += ' Z';
+        
+        doc.path(path, 'FD'); // Fill and Draw
+      };
+
       // Функция для добавления колонтитулов (используем текстовый метод, так как шрифт поддерживает кириллицу)
       const addHeaderFooter = (pageNum: number) => {
         doc.setPage(pageNum);
@@ -146,9 +175,16 @@ export function ProfilePage() {
         doc.setFont('arial', 'normal');
         
         // Верхний колонтитул
+        // Рисуем красную звезду слева от названия
+        const starSize = 4; // Размер звезды в мм
+        const starX = margin;
+        const starY = 10;
+        drawStar(starX + starSize / 2, starY, starSize);
+        
+        // Название портала с отступом от звезды
         doc.setFontSize(10);
         doc.setTextColor(115, 115, 115);
-        doc.text('Портал Поддержки Военнослужащих', margin, 10);
+        doc.text('Портал Поддержки Военнослужащих', margin + starSize + 2, 10);
         doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
         
         // Нижний колонтитул
