@@ -111,36 +111,26 @@ export function ProfilePage() {
         return;
       }
 
-      setMessage({ type: 'success', text: 'Генерация PDF... Это может занять некоторое время.' });
+      setMessage({ type: 'success', text: 'Генерация PDF...' });
 
-      // Создаем временный контейнер для рендеринга
+      // Создаем HTML контент для каждого запроса
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm'; // A4 width
-      container.style.padding = '20mm';
+      container.style.padding = '20mm 20mm 25mm 20mm'; // Отступы: верх, право, низ (для колонтитула), лево
       container.style.fontFamily = 'Arial, sans-serif';
       container.style.fontSize = '12px';
       container.style.color = '#262626';
       container.style.backgroundColor = '#ffffff';
       document.body.appendChild(container);
 
-      // Создаем HTML контент для каждого запроса
-      let htmlContent = `
-        <div style="margin-bottom: 30px;">
-          <div style="font-size: 18px; font-weight: bold; color: #2c5f8d; margin-bottom: 10px;">
-            Портал Поддержки Военнослужащих
-          </div>
-          <div style="font-size: 10px; color: #737373; margin-bottom: 20px;">
-            https://sergiologino-voensovet-1e9f.twc1.net | Экспорт от ${new Date().toLocaleDateString('ru-RU')}
-          </div>
-      `;
+      let htmlContent = '';
 
       requestsToExport.forEach((req, index) => {
         const question = req.primary_prompt || 'Нет вопроса';
         const fullAnswer = req.secondary_response || 'Нет ответа';
         const date = new Date(req.created_at).toLocaleString('ru-RU');
-        const requestTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
 
         htmlContent += `
           <div style="margin-bottom: 40px; page-break-inside: avoid;">
@@ -172,7 +162,6 @@ export function ProfilePage() {
         }
       });
 
-      htmlContent += '</div>';
       container.innerHTML = htmlContent;
 
       // Рендерим HTML в canvas
@@ -187,108 +176,94 @@ export function ProfilePage() {
       document.body.removeChild(container);
 
       // Создаем PDF
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const doc = new jsPDF('p', 'mm', 'a4');
-      
+      const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
       let heightLeft = imgHeight;
       let position = 0;
+      let currentPage = 1;
+      const totalRequests = requestsToExport.length;
+      const req = requestsToExport[0];
+      const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 60) : '';
 
-      // Добавляем первую страницу
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // Функция для добавления колонтитулов через html2canvas для кириллицы
+      const addHeaderFooter = async (pageNum: number) => {
+        doc.setPage(pageNum);
+        
+        // Верхний колонтитул - рендерим через html2canvas для кириллицы
+        const headerEl = document.createElement('div');
+        headerEl.style.position = 'absolute';
+        headerEl.style.left = '-9999px';
+        headerEl.style.width = `${pageWidth}mm`;
+        headerEl.style.padding = '0 20mm';
+        headerEl.style.fontFamily = 'Arial, sans-serif';
+        headerEl.style.fontSize = '10px';
+        headerEl.style.color = '#737373';
+        headerEl.style.backgroundColor = 'transparent';
+        headerEl.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Портал Поддержки Военнослужащих</span>
+            <span>https://sergiologino-voensovet-1e9f.twc1.net</span>
+          </div>
+        `;
+        document.body.appendChild(headerEl);
+        const headerCanvas = await html2canvas(headerEl, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
+        document.body.removeChild(headerEl);
+        
+        const headerImgWidth = pageWidth - 40;
+        const headerImgHeight = (headerCanvas.height * headerImgWidth) / headerCanvas.width;
+        doc.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 20, 5, headerImgWidth, headerImgHeight);
+        
+        // Нижний колонтитул - рендерим через html2canvas для кириллицы
+        const footerEl = document.createElement('div');
+        footerEl.style.position = 'absolute';
+        footerEl.style.left = '-9999px';
+        footerEl.style.width = `${pageWidth}mm`;
+        footerEl.style.padding = '0 20mm';
+        footerEl.style.fontFamily = 'Arial, sans-serif';
+        footerEl.style.fontSize = '9px';
+        footerEl.style.color = '#737373';
+        footerEl.style.backgroundColor = 'transparent';
+        footerEl.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
+            <span>Страница ${pageNum}</span>
+          </div>
+        `;
+        document.body.appendChild(footerEl);
+        const footerCanvas = await html2canvas(footerEl, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
+        document.body.removeChild(footerEl);
+        
+        const footerImgWidth = pageWidth - 40;
+        const footerImgHeight = (footerCanvas.height * footerImgWidth) / footerCanvas.width;
+        doc.addImage(footerCanvas.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
+      };
+
+      // Отступы для колонтитулов
+      const headerOffset = 15; // Отступ сверху для верхнего колонтитула
+      const footerOffset = 15; // Отступ снизу для нижнего колонтитула
+      const contentAreaHeight = pageHeight - headerOffset - footerOffset; // Высота области контента
+      
+      // Добавляем первую страницу с контентом
+      // Контент начинается после верхнего колонтитула, чтобы не налезать на него
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, headerOffset, imgWidth, imgHeight);
+      await addHeaderFooter(currentPage);
+      heightLeft -= contentAreaHeight;
 
       // Добавляем дополнительные страницы если нужно
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
+        currentPage++;
         doc.addPage();
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Добавляем колонтитулы на все страницы через canvas
-      const totalPages = doc.internal.pages.length - 1;
-      const req = requestsToExport[0];
-      const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 60) : '';
-      
-      // Создаем колонтитулы как изображения
-      const headerContainer = document.createElement('div');
-      headerContainer.style.position = 'absolute';
-      headerContainer.style.left = '-9999px';
-      headerContainer.style.width = '210mm';
-      headerContainer.style.padding = '0 20mm';
-      headerContainer.style.fontFamily = 'Arial, sans-serif';
-      headerContainer.style.fontSize = '10px';
-      headerContainer.style.color = '#737373';
-      headerContainer.style.backgroundColor = 'transparent';
-      headerContainer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-          <span>Портал Поддержки Военнослужащих</span>
-          <span>https://sergiologino-voensovet-1e9f.twc1.net</span>
-        </div>
-      `;
-      document.body.appendChild(headerContainer);
-      const headerCanvas = await html2canvas(headerContainer, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
-      document.body.removeChild(headerContainer);
-      
-      const footerContainer = document.createElement('div');
-      footerContainer.style.position = 'absolute';
-      footerContainer.style.left = '-9999px';
-      footerContainer.style.width = '210mm';
-      footerContainer.style.padding = '0 20mm';
-      footerContainer.style.fontFamily = 'Arial, sans-serif';
-      footerContainer.style.fontSize = '9px';
-      footerContainer.style.color = '#737373';
-      footerContainer.style.backgroundColor = 'transparent';
-      footerContainer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-          <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
-          <span>Страница 1 из ${totalPages}</span>
-        </div>
-      `;
-      document.body.appendChild(footerContainer);
-      const footerCanvas = await html2canvas(footerContainer, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
-      document.body.removeChild(footerContainer);
-      
-      // Добавляем колонтитулы на все страницы
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        
-        // Обновляем номер страницы в footer
-        if (i > 1) {
-          const footerContainer2 = document.createElement('div');
-          footerContainer2.style.position = 'absolute';
-          footerContainer2.style.left = '-9999px';
-          footerContainer2.style.width = '210mm';
-          footerContainer2.style.padding = '0 20mm';
-          footerContainer2.style.fontFamily = 'Arial, sans-serif';
-          footerContainer2.style.fontSize = '9px';
-          footerContainer2.style.color = '#737373';
-          footerContainer2.style.backgroundColor = 'transparent';
-          footerContainer2.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-              <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
-              <span>Страница ${i} из ${totalPages}</span>
-            </div>
-          `;
-          document.body.appendChild(footerContainer2);
-          const footerCanvas2 = await html2canvas(footerContainer2, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
-          document.body.removeChild(footerContainer2);
-          
-          const footerImgWidth = 190;
-          const footerImgHeight = (footerCanvas2.height * footerImgWidth) / footerCanvas2.width;
-          doc.addImage(footerCanvas2.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
-        } else {
-          const footerImgWidth = 190;
-          const footerImgHeight = (footerCanvas.height * footerImgWidth) / footerCanvas.width;
-          doc.addImage(footerCanvas.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
-        }
-        
-        // Верхний колонтитул
-        const headerImgWidth = 190;
-        const headerImgHeight = (headerCanvas.height * headerImgWidth) / headerCanvas.width;
-        doc.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 20, 5, headerImgWidth, headerImgHeight);
+        // На последующих страницах также учитываем отступ для колонтитула
+        // Позиция рассчитывается так, чтобы контент не налезал на колонтитулы
+        const adjustedPosition = headerOffset + (position < 0 ? 0 : position);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, adjustedPosition, imgWidth, imgHeight);
+        await addHeaderFooter(currentPage);
+        heightLeft -= contentAreaHeight;
       }
 
 
