@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { SEO } from '../components/seo/SEO';
 import { MarkdownRenderer } from '../components/ai/MarkdownRenderer';
+import arialFont from '../utils/fonts/arial-normal';
 import { UserIcon, History, Settings, Bot, Copy, Download, Check } from 'lucide-react';
 
 export function ProfilePage() {
@@ -98,9 +99,9 @@ export function ProfilePage() {
   };
 
   const exportToPDF = async (requestIds?: number[]) => {
+
     try {
       const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
       
       const requestsToExport = requestIds 
         ? aiRequests.filter(r => requestIds.includes(r.id))
@@ -113,158 +114,142 @@ export function ProfilePage() {
 
       setMessage({ type: 'success', text: 'Генерация PDF...' });
 
-      // Создаем HTML контент для каждого запроса
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.width = '210mm'; // A4 width
-      container.style.padding = '20mm 20mm 25mm 20mm'; // Отступы: верх, право, низ (для колонтитула), лево
-      container.style.fontFamily = 'Arial, sans-serif';
-      container.style.fontSize = '12px';
-      container.style.color = '#262626';
-      container.style.backgroundColor = '#ffffff';
-      document.body.appendChild(container);
-
-      let htmlContent = '';
-
-      requestsToExport.forEach((req, index) => {
-        const question = req.primary_prompt || 'Нет вопроса';
-        const fullAnswer = req.secondary_response || 'Нет ответа';
-        const date = new Date(req.created_at).toLocaleString('ru-RU');
-
-        htmlContent += `
-          <div style="margin-bottom: 40px; page-break-inside: avoid;">
-            <div style="font-size: 14px; font-weight: bold; color: #262626; margin-bottom: 5px;">
-              Запрос #${req.id}
-            </div>
-            <div style="font-size: 9px; color: #a3a3a3; margin-bottom: 15px;">
-              Дата: ${date}${req.network_used ? ` | Сеть: ${req.network_used}` : ''}
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-              <div style="font-size: 11px; font-weight: bold; color: #404040; margin-bottom: 5px;">Вопрос:</div>
-              <div style="font-size: 10px; color: #404040; background: #fafafa; padding: 10px; border: 1px solid #e5e5e5; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;">
-                ${question.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '')}
-              </div>
-            </div>
-            
-            <div>
-              <div style="font-size: 11px; font-weight: bold; color: #404040; margin-bottom: 5px;">Ответ:</div>
-              <div style="font-size: 10px; color: #404040; background: #f0f4f8; padding: 10px; border: 1px solid #2c5f8d; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word;">
-                ${fullAnswer.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`([^`]+)`/g, '$1').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')}
-              </div>
-            </div>
-          </div>
-        `;
-
-        if (index < requestsToExport.length - 1) {
-          htmlContent += '<hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;" />';
-        }
-      });
-
-      container.innerHTML = htmlContent;
-
-      // Рендерим HTML в canvas
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      // Удаляем временный контейнер
-      document.body.removeChild(container);
-
-      // Создаем PDF
+      // Создаем PDF с кириллическим шрифтом
       const doc = new jsPDF('p', 'mm', 'a4');
+      // Добавляем кириллический шрифт
+      // Файл шрифта экспортирует переменную font (base64 строка)
+      doc.addFileToVFS('arial-normal.ttf', arialFont);
+      doc.addFont('arial-normal.ttf', 'arial', 'normal');
+      doc.setFont('arial');
+
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const margin = 20;
+      const headerHeight = 15; // Высота верхнего колонтитула
+      const footerHeight = 15; // Высота нижнего колонтитула
+      const contentStartY = margin + headerHeight + 5; // Начало контента с учетом колонтитула + отступ
+      const contentEndY = pageHeight - margin - footerHeight - 5; // Конец контента с учетом колонтитула + отступ
+      const maxWidth = pageWidth - 2 * margin;
+      const lineHeight = 6;
       
-      let heightLeft = imgHeight;
-      let position = 0;
+      let yPosition = contentStartY;
       let currentPage = 1;
       const totalRequests = requestsToExport.length;
       const req = requestsToExport[0];
       const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 60) : '';
 
-      // Функция для добавления колонтитулов через html2canvas для кириллицы
-      const addHeaderFooter = async (pageNum: number) => {
+      // Функция для добавления колонтитулов (используем текстовый метод, так как шрифт поддерживает кириллицу)
+      const addHeaderFooter = (pageNum: number) => {
         doc.setPage(pageNum);
         
-        // Верхний колонтитул - рендерим через html2canvas для кириллицы
-        const headerEl = document.createElement('div');
-        headerEl.style.position = 'absolute';
-        headerEl.style.left = '-9999px';
-        headerEl.style.width = `${pageWidth}mm`;
-        headerEl.style.padding = '0 20mm';
-        headerEl.style.fontFamily = 'Arial, sans-serif';
-        headerEl.style.fontSize = '10px';
-        headerEl.style.color = '#737373';
-        headerEl.style.backgroundColor = 'transparent';
-        headerEl.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Портал Поддержки Военнослужащих</span>
-            <span>https://sergiologino-voensovet-1e9f.twc1.net</span>
-          </div>
-        `;
-        document.body.appendChild(headerEl);
-        const headerCanvas = await html2canvas(headerEl, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
-        document.body.removeChild(headerEl);
+        // Верхний колонтитул
+        doc.setFontSize(10);
+        doc.setFont('arial', 'normal');
+        doc.setTextColor(115, 115, 115);
+        doc.text('Портал Поддержки Военнослужащих', margin, 10);
+        doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
         
-        const headerImgWidth = pageWidth - 40;
-        const headerImgHeight = (headerCanvas.height * headerImgWidth) / headerCanvas.width;
-        doc.addImage(headerCanvas.toDataURL('image/png'), 'PNG', 20, 5, headerImgWidth, headerImgHeight);
-        
-        // Нижний колонтитул - рендерим через html2canvas для кириллицы
-        const footerEl = document.createElement('div');
-        footerEl.style.position = 'absolute';
-        footerEl.style.left = '-9999px';
-        footerEl.style.width = `${pageWidth}mm`;
-        footerEl.style.padding = '0 20mm';
-        footerEl.style.fontFamily = 'Arial, sans-serif';
-        footerEl.style.fontSize = '9px';
-        footerEl.style.color = '#737373';
-        footerEl.style.backgroundColor = 'transparent';
-        footerEl.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>${requestTitle ? `Тема: ${requestTitle}` : ''}</span>
-            <span>Страница ${pageNum}</span>
-          </div>
-        `;
-        document.body.appendChild(footerEl);
-        const footerCanvas = await html2canvas(footerEl, { scale: 2, useCORS: true, logging: false, backgroundColor: null });
-        document.body.removeChild(footerEl);
-        
-        const footerImgWidth = pageWidth - 40;
-        const footerImgHeight = (footerCanvas.height * footerImgWidth) / footerCanvas.width;
-        doc.addImage(footerCanvas.toDataURL('image/png'), 'PNG', 20, pageHeight - footerImgHeight - 5, footerImgWidth, footerImgHeight);
+        // Нижний колонтитул
+        doc.setFontSize(9);
+        if (requestTitle) {
+          doc.text(`Тема: ${requestTitle}`, margin, pageHeight - 5);
+        }
+        doc.text(`Страница ${pageNum}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
       };
 
-      // Отступы для колонтитулов
-      const headerOffset = 15; // Отступ сверху для верхнего колонтитула
-      const footerOffset = 15; // Отступ снизу для нижнего колонтитула
-      const contentAreaHeight = pageHeight - headerOffset - footerOffset; // Высота области контента
-      
-      // Добавляем первую страницу с контентом
-      // Контент начинается после верхнего колонтитула, чтобы не налезать на него
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, headerOffset, imgWidth, imgHeight);
-      await addHeaderFooter(currentPage);
-      heightLeft -= contentAreaHeight;
+      // Добавляем колонтитулы на первую страницу
+      addHeaderFooter(currentPage);
 
-      // Добавляем дополнительные страницы если нужно
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        currentPage++;
-        doc.addPage();
-        // На последующих страницах также учитываем отступ для колонтитула
-        // Позиция рассчитывается так, чтобы контент не налезал на колонтитулы
-        const adjustedPosition = headerOffset + (position < 0 ? 0 : position);
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, adjustedPosition, imgWidth, imgHeight);
-        await addHeaderFooter(currentPage);
-        heightLeft -= contentAreaHeight;
-      }
+      // Функция для добавления текста с поддержкой кириллицы
+      const addText = (text: string, x: number, y: number, options: any = {}) => {
+        // Разбиваем текст на строки
+        const lines = doc.splitTextToSize(text, maxWidth);
+        let currentY = y;
+        
+        lines.forEach((line: string) => {
+          // Проверяем, нужна ли новая страница
+          if (currentY > contentEndY - lineHeight) {
+            currentPage++;
+            doc.addPage();
+            addHeaderFooter(currentPage);
+            currentY = contentStartY;
+          }
+          
+          // Используем метод text с кириллическим шрифтом
+          doc.text(line, x, currentY, options);
+          currentY += lineHeight;
+        });
+        
+        return currentY;
+      };
+
+      requestsToExport.forEach((req, index) => {
+        const question = req.primary_prompt || 'Нет вопроса';
+        const fullAnswer = req.secondary_response || 'Нет ответа';
+        const date = new Date(req.created_at).toLocaleString('ru-RU');
+        
+        // Проверяем, нужна ли новая страница перед новым запросом
+        if (yPosition > contentEndY - 30 && index > 0) {
+          currentPage++;
+          doc.addPage();
+          addHeaderFooter(currentPage);
+          yPosition = contentStartY;
+        }
+
+        // Заголовок запроса
+        doc.setFontSize(14);
+        doc.setFont('arial', 'bold');
+        doc.setTextColor(38, 38, 38);
+        yPosition = addText(`Запрос #${req.id}`, margin, yPosition);
+        yPosition += 2;
+
+        // Дата и метаданные
+        doc.setFontSize(9);
+        doc.setFont('arial', 'normal');
+        doc.setTextColor(163, 163, 163);
+        yPosition = addText(`Дата: ${date}${req.network_used ? ` | Сеть: ${req.network_used}` : ''}`, margin, yPosition);
+        yPosition += 3;
+
+        // Вопрос
+        doc.setFontSize(11);
+        doc.setFont('arial', 'bold');
+        doc.setTextColor(64, 64, 64);
+        yPosition = addText('Вопрос:', margin, yPosition);
+        
+        doc.setFont('arial', 'normal');
+        doc.setFontSize(10);
+        const cleanQuestion = question.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '');
+        yPosition = addText(cleanQuestion, margin, yPosition);
+        yPosition += 4;
+
+        // Ответ
+        doc.setFont('arial', 'bold');
+        yPosition = addText('Ответ:', margin, yPosition);
+        doc.setFont('arial', 'normal');
+        
+        const cleanAnswer = fullAnswer
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        
+        yPosition = addText(cleanAnswer, margin, yPosition);
+
+        // Разделитель между запросами
+        if (index < totalRequests - 1) {
+          yPosition += 8;
+          if (yPosition > contentEndY - 10) {
+            currentPage++;
+            doc.addPage();
+            addHeaderFooter(currentPage);
+            yPosition = contentStartY;
+          }
+          doc.setDrawColor(229, 229, 229);
+          doc.setLineWidth(0.5);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          yPosition += 12;
+        }
+      });
 
 
       const fileName = requestIds && requestIds.length === 1
@@ -494,7 +479,7 @@ export function ProfilePage() {
           <div className="space-y-4">
             {/* Toolbar */}
             <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-4 flex items-center justify-between flex-wrap gap-4">
-              <h2 className="text-xl font-semibold text-[#262626]">История AI запросов</h2>
+              <h2 className="text-xl font-semibold text-[#262626]">История запросов к Комбату</h2>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
