@@ -1,0 +1,155 @@
+import React, { useState } from 'react';
+import { Button } from '../ui/Button';
+import { Alert } from '../ui/Alert';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
+import { Bot, Send } from 'lucide-react';
+
+export function AiAssistant() {
+  const { user } = useAuth();
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const exampleQueries = [
+    'Какие льготы положены военнослужащим после увольнения?',
+    'Как оформить пенсию по инвалидности?',
+    'Какие документы нужны для получения жилищной субсидии?',
+    'Куда обратиться за психологической помощью?'
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) {
+      setError('Для использования AI помощника необходимо войти в систему');
+      return;
+    }
+
+    if (!query.trim()) {
+      setError('Введите ваш вопрос');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setAnswer(null);
+
+    try {
+      const response = await api.processAiRequest(query);
+      setAnswer(response.answer);
+      setQuery('');
+    } catch (err: any) {
+      setError(err.message || 'Ошибка при обработке запроса. Попробуйте позже.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExampleClick = (example: string) => {
+    setQuery(example);
+    setError(null);
+    setAnswer(null);
+  };
+
+  return (
+    <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-6 lg:p-8 shadow-lg">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
+          <Bot className="text-white" size={24} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-[#262626]">AI помощник</h2>
+          <p className="text-sm text-[#737373]">Задайте вопрос и получите помощь</p>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-[#404040] mb-2">
+            Ваш вопрос
+          </label>
+          <textarea
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setError(null);
+            }}
+            rows={4}
+            className="w-full px-4 py-3 bg-white border-2 border-[#d4d4d4] rounded-xl text-[#262626] focus:outline-none focus:border-[#2c5f8d] focus:ring-2 focus:ring-[#2c5f8d] focus:ring-opacity-20 transition-colors"
+            placeholder="Например: Какие льготы положены военнослужащим после увольнения?"
+            required
+            disabled={loading || !user}
+          />
+        </div>
+
+        {/* Примеры запросов */}
+        <div>
+          <p className="text-xs text-[#737373] mb-2">Примеры вопросов:</p>
+          <div className="flex flex-wrap gap-2">
+            {exampleQueries.map((example, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleExampleClick(example)}
+                disabled={loading || !user}
+                className="px-3 py-1.5 text-xs bg-[#f0f4f8] text-[#2c5f8d] rounded-lg hover:bg-[#d9e6f2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Button 
+          type="submit" 
+          disabled={loading || !user} 
+          fullWidth
+          className="flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <span className="animate-spin">⏳</span>
+              Обработка запроса...
+            </>
+          ) : (
+            <>
+              <Send size={18} />
+              Отправить запрос
+            </>
+          )}
+        </Button>
+
+        {!user && (
+          <p className="text-xs text-center text-[#737373]">
+            <a href="#profile" className="text-[#2c5f8d] hover:underline">
+              Войдите в систему
+            </a>
+            {' '}для использования AI помощника
+          </p>
+        )}
+      </form>
+
+      {/* Ответ AI */}
+      {answer && (
+        <div className="mt-6 p-4 bg-[#f0f4f8] border-2 border-[#2c5f8d] rounded-xl">
+          <h3 className="font-semibold text-[#262626] mb-2 flex items-center gap-2">
+            <Bot size={18} className="text-[#2c5f8d]" />
+            Ответ:
+          </h3>
+          <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
+            {answer}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

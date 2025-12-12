@@ -5,6 +5,7 @@ import { HeroSection } from '../components/home/HeroSection';
 import { QuickActions } from '../components/home/QuickActions';
 import { ContractServiceBanner } from '../components/home/ContractServiceBanner';
 import { TrustSection } from '../components/home/TrustSection';
+import { AiAssistant } from '../components/ai/AiAssistant';
 
 export function HomePage() {
   return (
@@ -33,6 +34,14 @@ export function HomePage() {
       <main>
         <HeroSection />
         <QuickActions />
+        
+        {/* AI Assistant Section */}
+        <section className="py-12 lg:py-16 bg-[#fafafa]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <AiAssistant />
+          </div>
+        </section>
+
         <ContractServiceBanner />
         <TrustSection />
       </main>

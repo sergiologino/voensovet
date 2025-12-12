@@ -10,7 +10,7 @@ import { UserIcon, History, Settings } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'ai'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'history'>('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -27,6 +27,7 @@ export function ProfilePage() {
   // History
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
 
   useEffect(() => {
     if (user) {
@@ -93,6 +94,7 @@ export function ProfilePage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-white">
@@ -226,6 +228,7 @@ export function ProfilePage() {
             )}
           </div>
         )}
+
       </main>
       <Footer />
     </div>

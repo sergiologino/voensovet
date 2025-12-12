@@ -5,6 +5,7 @@ import { HelpCategory } from '../components/help/HelpCategory';
 import { OrganizationCard } from '../components/help/OrganizationCard';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { AiAssistant } from '../components/ai/AiAssistant';
 import { HeartIcon, StethoscopeIcon, UsersIcon, ScaleIcon, SearchIcon } from 'lucide-react';
 export function HelpPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -74,6 +75,11 @@ export function HelpPage() {
                 Все обращения конфиденциальны. Вы можете получить помощь
                 анонимно.
               </Alert>
+
+              {/* AI Assistant */}
+              <div className="mb-12">
+                <AiAssistant />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {categories.map(category => <HelpCategory key={category.id} icon={category.icon} title={category.title} description={category.description} onClick={() => setSelectedCategory(category.id)} />)}
