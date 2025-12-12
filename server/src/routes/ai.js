@@ -51,13 +51,33 @@ router.get('/networks', async (req, res, next) => {
 // Обработать запрос через две нейросети
 router.post('/process', async (req, res, next) => {
   try {
-    const { userQuery } = req.body;
+    const { userQuery, regionName } = req.body;
 
     if (!userQuery || typeof userQuery !== 'string') {
       return res.status(400).json({ error: 'Запрос пользователя обязателен' });
     }
 
     const apiKey = await getOrCreateApiKey(req.user.id);
+
+    // Получаем данные пользователя
+    const userResult = await pool.query(
+      'SELECT full_name, phone, email FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = userResult.rows[0] || {};
+    const userName = user.full_name || null;
+    
+    // Определяем имя и отчество для обращения
+    let nameForAddress = '';
+    if (userName) {
+      const nameParts = userName.trim().split(/\s+/);
+      if (nameParts.length >= 2) {
+        // Берем имя и отчество
+        nameForAddress = `${nameParts[1]} ${nameParts[2] || ''}`.trim();
+      } else if (nameParts.length === 1) {
+        nameForAddress = nameParts[0];
+      }
+    }
 
     // Получаем промпты из настроек админа
     const settingsResult = await pool.query(
@@ -71,11 +91,30 @@ router.post('/process', async (req, res, next) => {
     });
 
     const primaryPrompt = settings.primary_prompt || 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы.';
-    const secondaryPrompt = settings.secondary_prompt || 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ.';
+    const secondaryPromptBase = settings.secondary_prompt || 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ.';
 
-    // Первый запрос - анализ запроса пользователя
+    // Получаем доступные нейросети и сортируем по приоритету
+    const networksResponse = await axios.get(`${AI_SERVICE_URL}/api/ai/networks/available`, {
+      headers: { 'X-API-Key': apiKey }
+    });
+
+    const networks = networksResponse.data || [];
+    // Сортируем по приоритету: меньший приоритет = выше в списке
+    const sortedNetworks = networks.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+    
+    const minPriorityNetwork = sortedNetworks[0]; // Минимальный приоритет (первый запрос)
+    const maxPriorityNetwork = sortedNetworks[sortedNetworks.length - 1]; // Максимальный приоритет (второй запрос)
+
+    if (!minPriorityNetwork || !maxPriorityNetwork) {
+      throw new Error('Не найдены доступные нейросети');
+    }
+
+    console.log(`Используем сети: первая (мин приоритет ${minPriorityNetwork.priority}) - ${minPriorityNetwork.name}, вторая (макс приоритет ${maxPriorityNetwork.priority}) - ${maxPriorityNetwork.name}`);
+
+    // Первый запрос - анализ запроса пользователя (в сеть с минимальным приоритетом)
     const primaryRequest = {
       userId: req.user.id.toString(),
+      networkName: minPriorityNetwork.name,
       requestType: 'chat',
       payload: {
         messages: [
@@ -91,7 +130,7 @@ router.post('/process', async (req, res, next) => {
       }
     };
 
-    console.log('Отправка первичного запроса в AI...');
+    console.log('Отправка первичного запроса в AI (сеть с минимальным приоритетом)...');
     const primaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       primaryRequest,
@@ -112,9 +151,51 @@ router.post('/process', async (req, res, next) => {
       || primaryResponse.data.response?.text 
       || JSON.stringify(primaryResponse.data.response);
 
-    // Второй запрос - развернутый ответ на основе анализа
+    // Формируем второй промпт с учетом региона и данных пользователя
+    let secondaryPrompt = secondaryPromptBase;
+    
+    if (regionName) {
+      secondaryPrompt += `\n\nВАЖНО: Пользователь находится в регионе: ${regionName}. Учитывай региональное законодательство и местные особенности при формировании ответа.`;
+    }
+    
+    if (nameForAddress) {
+      secondaryPrompt += `\n\nОбращайся к пользователю по имени-отчеству: ${nameForAddress}.`;
+    }
+    
+    secondaryPrompt += `\n\nТребования к ответу:
+1. Ответ должен быть разделен на ДВЕ части:
+   
+   ЧАСТЬ 1 - КРАТКИЙ ОТВЕТ (до 300 слов):
+   - Емкий список основных пунктов
+   - Ключевая информация по делу
+   - Основные шаги действий
+   - Формат: маркированный список или короткие абзацы
+   
+   ЧАСТЬ 2 - ПОДРОБНЫЙ ОТВЕТ (после разделителя "===ПОДРОБНО==="):
+   - Полное обоснование каждого пункта
+   - Конкретные статьи законов (федеральных и региональных ${regionName ? `для региона ${regionName}` : ''})
+   - Телефоны, адреса и URL организаций (обязательно, если упоминаются)
+   - Пошаговый порядок действий с деталями
+   - Ссылки на нормативные акты
+   - Контактная информация организаций
+   
+2. Формат ответа:
+   [КРАТКИЙ ОТВЕТ - список основных пунктов]
+   
+   ===ПОДРОБНО===
+   
+   [ПОДРОБНЫЙ ОТВЕТ - с обоснованиями, законами, контактами]
+   
+3. Обязательно указывай:
+   - Телефоны организаций в формате: +7 (XXX) XXX-XX-XX или 8-800-XXX-XX-XX
+   - Адреса в полном формате
+   - URL веб-сайтов
+   - Номера статей законов с названиями документов`;
+
+    // Второй запрос - развернутый ответ на основе анализа (в сеть с максимальным приоритетом)
     const secondaryRequest = {
       userId: req.user.id.toString(),
+      networkName: maxPriorityNetwork.name,
       requestType: 'chat',
       payload: {
         messages: [
@@ -130,7 +211,7 @@ router.post('/process', async (req, res, next) => {
       }
     };
 
-    console.log('Отправка вторичного запроса в AI...');
+    console.log('Отправка вторичного запроса в AI (сеть с максимальным приоритетом)...');
     const secondaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       secondaryRequest,
@@ -147,9 +228,87 @@ router.post('/process', async (req, res, next) => {
     }
 
     // Извлекаем финальный ответ
-    const finalAnswer = secondaryResponse.data.response?.choices?.[0]?.message?.content 
+    const fullAnswer = secondaryResponse.data.response?.choices?.[0]?.message?.content 
       || secondaryResponse.data.response?.text 
       || JSON.stringify(secondaryResponse.data.response);
+
+    // Разделяем ответ на краткий и подробный
+    let shortAnswer = '';
+    let detailedAnswer = fullAnswer;
+
+    // Ищем разделитель "===ПОДРОБНО==="
+    const detailedSeparator = '===ПОДРОБНО===';
+    const separatorIndex = fullAnswer.indexOf(detailedSeparator);
+    
+    if (separatorIndex > 0) {
+      // Есть явный разделитель
+      shortAnswer = fullAnswer.substring(0, separatorIndex).trim();
+      detailedAnswer = fullAnswer.substring(separatorIndex + detailedSeparator.length).trim();
+    } else {
+      // Ищем альтернативные разделители
+      const altSeparators = [
+        '=== ПОДРОБНО ===',
+        '===ПОДРОБНЕЕ===',
+        '---ПОДРОБНО---',
+        'ПОДРОБНО:',
+        'Детали:',
+        'Обоснование:'
+      ];
+      
+      let foundSeparator = false;
+      for (const sep of altSeparators) {
+        const idx = fullAnswer.indexOf(sep);
+        if (idx > 0) {
+          shortAnswer = fullAnswer.substring(0, idx).trim();
+          detailedAnswer = fullAnswer.substring(idx + sep.length).trim();
+          foundSeparator = true;
+          break;
+        }
+      }
+      
+      if (!foundSeparator) {
+        // Если нет разделителя, пытаемся найти краткое резюме
+        const lines = fullAnswer.split('\n');
+        const summaryEndIndex = lines.findIndex((line, index) => 
+          index > 5 && (
+            line.toLowerCase().includes('подробнее') || 
+            line.toLowerCase().includes('детали') ||
+            line.toLowerCase().includes('обоснование') ||
+            line.toLowerCase().includes('законы') ||
+            line.toLowerCase().includes('стать')
+          )
+        );
+
+        if (summaryEndIndex > 0 && summaryEndIndex < lines.length / 2) {
+          shortAnswer = lines.slice(0, summaryEndIndex).join('\n').trim();
+          detailedAnswer = lines.slice(summaryEndIndex).join('\n').trim();
+        } else {
+          // Берем первые 400 символов как краткий ответ
+          shortAnswer = fullAnswer.substring(0, 400).trim();
+          if (fullAnswer.length > 400) {
+            // Пытаемся обрезать по последней точке или переносу строки
+            const lastDot = shortAnswer.lastIndexOf('.');
+            const lastNewline = shortAnswer.lastIndexOf('\n');
+            const cutPoint = Math.max(lastDot, lastNewline);
+            if (cutPoint > 200) {
+              shortAnswer = shortAnswer.substring(0, cutPoint + 1);
+            } else {
+              shortAnswer += '...';
+            }
+          }
+          detailedAnswer = fullAnswer;
+        }
+      }
+    }
+    
+    // Если краткий ответ пустой или слишком короткий, используем первые 300 символов
+    if (!shortAnswer || shortAnswer.length < 50) {
+      shortAnswer = fullAnswer.substring(0, 300).trim();
+      if (fullAnswer.length > 300) {
+        shortAnswer += '...';
+      }
+      detailedAnswer = fullAnswer;
+    }
 
     // Сохраняем запрос в БД
     await pool.query(
@@ -162,8 +321,8 @@ router.post('/process', async (req, res, next) => {
         userQuery,
         primaryAnalysis,
         `${secondaryPrompt}\n\nАнализ: ${primaryAnalysis}\n\nЗапрос: ${userQuery}`,
-        finalAnswer,
-        secondaryResponse.data.networkUsed || 'unknown',
+        fullAnswer,
+        `${minPriorityNetwork.name} -> ${maxPriorityNetwork.name}`,
         (primaryResponse.data.tokensUsed || 0) + (secondaryResponse.data.tokensUsed || 0),
         (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
       ]
@@ -171,9 +330,10 @@ router.post('/process', async (req, res, next) => {
 
     res.json({
       success: true,
-      answer: finalAnswer,
+      shortAnswer: shortAnswer,
+      detailedAnswer: detailedAnswer,
       analysis: primaryAnalysis,
-      networkUsed: secondaryResponse.data.networkUsed,
+      networkUsed: `${minPriorityNetwork.name} -> ${maxPriorityNetwork.name}`,
       tokensUsed: (primaryResponse.data.tokensUsed || 0) + (secondaryResponse.data.tokensUsed || 0),
       executionTimeMs: (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
     });

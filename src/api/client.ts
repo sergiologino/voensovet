@@ -122,17 +122,18 @@ export const api = {
     return request<{ networks: any[] }>('/api/ai/networks');
   },
 
-  async processAiRequest(userQuery: string) {
+  async processAiRequest(userQuery: string, regionName?: string) {
     return request<{
       success: boolean;
-      answer: string;
+      shortAnswer: string;
+      detailedAnswer: string;
       analysis: string;
       networkUsed: string;
       tokensUsed: number;
       executionTimeMs: number;
     }>('/api/ai/process', {
       method: 'POST',
-      body: JSON.stringify({ userQuery }),
+      body: JSON.stringify({ userQuery, regionName }),
     });
   },
 

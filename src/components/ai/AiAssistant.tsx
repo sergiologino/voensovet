@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { useAuth } from '../../context/AuthContext';
+import { useRegionContext } from '../../context/RegionContext';
 import { api } from '../../api/client';
-import { Bot, Send } from 'lucide-react';
+import { Bot, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function AiAssistant() {
   const { user } = useAuth();
+  const { region } = useRegionContext();
   const [query, setQuery] = useState('');
-  const [answer, setAnswer] = useState<string | null>(null);
+  const [shortAnswer, setShortAnswer] = useState<string | null>(null);
+  const [detailedAnswer, setDetailedAnswer] = useState<string | null>(null);
+  const [showDetailed, setShowDetailed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,11 +38,15 @@ export function AiAssistant() {
 
     setLoading(true);
     setError(null);
-    setAnswer(null);
+    setShortAnswer(null);
+    setDetailedAnswer(null);
+    setShowDetailed(false);
 
     try {
-      const response = await api.processAiRequest(query);
-      setAnswer(response.answer);
+      const regionName = region?.name || undefined;
+      const response = await api.processAiRequest(query, regionName);
+      setShortAnswer(response.shortAnswer);
+      setDetailedAnswer(response.detailedAnswer);
       setQuery('');
     } catch (err: any) {
       setError(err.message || 'Ошибка при обработке запроса. Попробуйте позже.');
@@ -138,15 +146,45 @@ export function AiAssistant() {
       </form>
 
       {/* Ответ AI */}
-      {answer && (
-        <div className="mt-6 p-4 bg-[#f0f4f8] border-2 border-[#2c5f8d] rounded-xl">
-          <h3 className="font-semibold text-[#262626] mb-2 flex items-center gap-2">
-            <Bot size={18} className="text-[#2c5f8d]" />
-            Ответ:
-          </h3>
-          <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
-            {answer}
+      {shortAnswer && (
+        <div className="mt-6 space-y-4">
+          {/* Краткий ответ */}
+          <div className="p-4 bg-[#f0f4f8] border-2 border-[#2c5f8d] rounded-xl">
+            <h3 className="font-semibold text-[#262626] mb-3 flex items-center gap-2">
+              <Bot size={18} className="text-[#2c5f8d]" />
+              Краткий ответ:
+            </h3>
+            <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
+              {shortAnswer}
+            </div>
           </div>
+
+          {/* Подробный ответ под спойлером */}
+          {detailedAnswer && detailedAnswer !== shortAnswer && (
+            <div className="border-2 border-[#e5e5e5] rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowDetailed(!showDetailed)}
+                className="w-full px-4 py-3 bg-[#f5f5f5] hover:bg-[#e5e5e5] transition-colors flex items-center justify-between text-left"
+              >
+                <span className="font-semibold text-[#262626]">
+                  Подробный ответ с обоснованиями и ссылками
+                </span>
+                {showDetailed ? (
+                  <ChevronUp size={20} className="text-[#737373]" />
+                ) : (
+                  <ChevronDown size={20} className="text-[#737373]" />
+                )}
+              </button>
+              
+              {showDetailed && (
+                <div className="p-4 bg-white">
+                  <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
+                    {detailedAnswer}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
