@@ -120,7 +120,7 @@ export function ProfilePage() {
       // Файл шрифта экспортирует переменную font (base64 строка)
       doc.addFileToVFS('arial-normal.ttf', arialFont);
       doc.addFont('arial-normal.ttf', 'arial', 'normal');
-      doc.setFont('arial');
+      doc.setFont('arial', 'normal'); // Явно указываем стиль
 
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
@@ -142,9 +142,11 @@ export function ProfilePage() {
       const addHeaderFooter = (pageNum: number) => {
         doc.setPage(pageNum);
         
+        // ВАЖНО: После setPage() нужно заново установить шрифт
+        doc.setFont('arial', 'normal');
+        
         // Верхний колонтитул
         doc.setFontSize(10);
-        doc.setFont('arial', 'normal');
         doc.setTextColor(115, 115, 115);
         doc.text('Портал Поддержки Военнослужащих', margin, 10);
         doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
@@ -173,8 +175,12 @@ export function ProfilePage() {
             doc.addPage();
             addHeaderFooter(currentPage);
             currentY = contentStartY;
+            // После добавления новой страницы нужно снова установить шрифт
+            doc.setFont('arial', 'normal');
           }
           
+          // Убеждаемся, что шрифт установлен перед выводом текста
+          doc.setFont('arial', 'normal');
           // Используем метод text с кириллическим шрифтом
           doc.text(line, x, currentY, options);
           currentY += lineHeight;
@@ -198,7 +204,7 @@ export function ProfilePage() {
 
         // Заголовок запроса
         doc.setFontSize(14);
-        doc.setFont('arial', 'bold');
+        doc.setFont('arial', 'normal'); // Используем normal, так как bold может быть не зарегистрирован
         doc.setTextColor(38, 38, 38);
         yPosition = addText(`Запрос #${req.id}`, margin, yPosition);
         yPosition += 2;
@@ -212,7 +218,7 @@ export function ProfilePage() {
 
         // Вопрос
         doc.setFontSize(11);
-        doc.setFont('arial', 'bold');
+        doc.setFont('arial', 'normal'); // Используем normal, так как bold может быть не зарегистрирован
         doc.setTextColor(64, 64, 64);
         yPosition = addText('Вопрос:', margin, yPosition);
         
@@ -223,7 +229,7 @@ export function ProfilePage() {
         yPosition += 4;
 
         // Ответ
-        doc.setFont('arial', 'bold');
+        doc.setFont('arial', 'normal'); // Используем normal для всех стилей
         yPosition = addText('Ответ:', margin, yPosition);
         doc.setFont('arial', 'normal');
         
