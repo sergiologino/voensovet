@@ -3,7 +3,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { Alert } from '../ui/Alert';
-import { XIcon } from 'lucide-react';
+import { XIcon, Phone, Mail } from 'lucide-react';
+import InputMask from 'react-input-mask';
 
 interface RegisterProps {
   onClose?: () => void;
@@ -12,7 +13,9 @@ interface RegisterProps {
 
 export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
   const { register } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [contactType, setContactType] = useState<'phone' | 'email'>('phone');
+  const [phone, setPhone] = useState('+7 ');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -27,9 +30,32 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
     return { question: `${a} + ${b}`, answer: a + b };
   });
 
+  const validatePhone = (phoneValue: string): boolean => {
+    const cleaned = phoneValue.replace(/\D/g, '');
+    return cleaned.length === 11 && cleaned.startsWith('7');
+  };
+
+  const validateEmail = (emailValue: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailValue);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Валидация контакта
+    if (contactType === 'phone') {
+      if (!validatePhone(phone)) {
+        setError('Введите корректный номер телефона в формате +7 (999) 123-45-67');
+        return;
+      }
+    } else {
+      if (!validateEmail(email)) {
+        setError('Введите корректный email адрес');
+        return;
+      }
+    }
 
     if (password !== confirmPassword) {
       setError('Пароли не совпадают');
@@ -47,14 +73,15 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
       return;
     }
 
-    if (!phone || !password) {
+    if (!password) {
       setError('Заполните все обязательные поля');
       return;
     }
 
     setLoading(true);
     try {
-      await register(phone, password, fullName || undefined, captcha);
+      const contact = contactType === 'phone' ? phone : email;
+      await register(contact, password, fullName || undefined, captcha);
       onClose?.();
     } catch (err: any) {
       setError(err.message || 'Ошибка регистрации');
@@ -84,14 +111,79 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
         {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Номер телефона"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+7 (999) 123-45-67"
-            required
-          />
+          {/* Выбор типа контакта */}
+          <div>
+            <label className="block text-sm font-medium text-[#404040] mb-2">
+              Способ связи <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setContactType('phone');
+                  setEmail('');
+                  setPhone('+7 ');
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  contactType === 'phone'
+                    ? 'border-[#2c5f8d] bg-[#f0f4f8] text-[#2c5f8d]'
+                    : 'border-[#d4d4d4] bg-white text-[#404040] hover:border-[#2c5f8d]'
+                }`}
+              >
+                <Phone size={18} />
+                Телефон
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setContactType('email');
+                  setPhone('+7 ');
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  contactType === 'email'
+                    ? 'border-[#2c5f8d] bg-[#f0f4f8] text-[#2c5f8d]'
+                    : 'border-[#d4d4d4] bg-white text-[#404040] hover:border-[#2c5f8d]'
+                }`}
+              >
+                <Mail size={18} />
+                Email
+              </button>
+            </div>
+          </div>
+
+          {/* Поле телефона или email */}
+          {contactType === 'phone' ? (
+            <div>
+              <label className="block text-sm font-medium text-[#404040] mb-2">
+                Номер телефона <span className="text-red-500">*</span>
+              </label>
+              <InputMask
+                mask="+7 (999) 999-99-99"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                alwaysShowMask={false}
+              >
+                {(inputProps: any) => (
+                  <input
+                    {...inputProps}
+                    type="tel"
+                    className="w-full px-4 py-3 bg-white border-2 border-[#d4d4d4] rounded-xl text-[#262626] focus:outline-none focus:border-[#2c5f8d] focus:ring-2 focus:ring-[#2c5f8d] focus:ring-opacity-20 transition-colors"
+                    placeholder="+7 (999) 123-45-67"
+                    required
+                  />
+                )}
+              </InputMask>
+            </div>
+          ) : (
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@mail.ru"
+              required
+            />
+          )}
 
           <Input
             label="ФИО (необязательно)"
@@ -101,14 +193,19 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
             placeholder="Иванов Иван Иванович"
           />
 
-          <Input
-            label="Пароль"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Не менее 6 символов"
-            required
-          />
+          <div>
+            <Input
+              label="Пароль"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Введите пароль"
+              required
+            />
+            <p className="mt-1 text-xs text-[#737373]">
+              Требования к паролю: минимум 6 символов, рекомендуется использовать буквы, цифры и специальные символы
+            </p>
+          </div>
 
           <Input
             label="Подтвердите пароль"

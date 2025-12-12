@@ -3,7 +3,8 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { Alert } from '../ui/Alert';
-import { XIcon } from 'lucide-react';
+import { XIcon, Phone, Mail } from 'lucide-react';
+import InputMask from 'react-input-mask';
 
 interface LoginProps {
   onClose?: () => void;
@@ -12,7 +13,9 @@ interface LoginProps {
 
 export function Login({ onClose, onSwitchToRegister }: LoginProps) {
   const { login } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [contactType, setContactType] = useState<'phone' | 'email'>('phone');
+  const [phone, setPhone] = useState('+7 ');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
   const [error, setError] = useState('');
@@ -35,14 +38,15 @@ export function Login({ onClose, onSwitchToRegister }: LoginProps) {
       return;
     }
 
-    if (!phone || !password) {
+    const contact = contactType === 'phone' ? phone : email;
+    if (!contact || !password) {
       setError('Заполните все поля');
       return;
     }
 
     setLoading(true);
     try {
-      await login(phone, password, captcha);
+      await login(contact, password, captcha);
       onClose?.();
     } catch (err: any) {
       setError(err.message || 'Ошибка входа');
@@ -72,14 +76,79 @@ export function Login({ onClose, onSwitchToRegister }: LoginProps) {
         {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Номер телефона"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+7 (999) 123-45-67"
-            required
-          />
+          {/* Выбор типа контакта */}
+          <div>
+            <label className="block text-sm font-medium text-[#404040] mb-2">
+              Способ входа
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setContactType('phone');
+                  setEmail('');
+                  setPhone('+7 ');
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  contactType === 'phone'
+                    ? 'border-[#2c5f8d] bg-[#f0f4f8] text-[#2c5f8d]'
+                    : 'border-[#d4d4d4] bg-white text-[#404040] hover:border-[#2c5f8d]'
+                }`}
+              >
+                <Phone size={18} />
+                Телефон
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setContactType('email');
+                  setPhone('+7 ');
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-colors ${
+                  contactType === 'email'
+                    ? 'border-[#2c5f8d] bg-[#f0f4f8] text-[#2c5f8d]'
+                    : 'border-[#d4d4d4] bg-white text-[#404040] hover:border-[#2c5f8d]'
+                }`}
+              >
+                <Mail size={18} />
+                Email
+              </button>
+            </div>
+          </div>
+
+          {/* Поле телефона или email */}
+          {contactType === 'phone' ? (
+            <div>
+              <label className="block text-sm font-medium text-[#404040] mb-2">
+                Номер телефона
+              </label>
+              <InputMask
+                mask="+7 (999) 999-99-99"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                alwaysShowMask={false}
+              >
+                {(inputProps: any) => (
+                  <input
+                    {...inputProps}
+                    type="tel"
+                    className="w-full px-4 py-3 bg-white border-2 border-[#d4d4d4] rounded-xl text-[#262626] focus:outline-none focus:border-[#2c5f8d] focus:ring-2 focus:ring-[#2c5f8d] focus:ring-opacity-20 transition-colors"
+                    placeholder="+7 (999) 123-45-67"
+                    required
+                  />
+                )}
+              </InputMask>
+            </div>
+          ) : (
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@mail.ru"
+              required
+            />
+          )}
 
           <Input
             label="Пароль"

@@ -25,23 +25,26 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo and Title */}
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
-              <span className="text-white text-xl font-bold">П</span>
-            </div>
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-bold text-[#262626]">
+              <h1 className="text-2xl font-bold text-[#262626] leading-tight">
                 Портал Поддержки
               </h1>
-              <p className="text-xs text-[#737373] font-mono">Помощь и права</p>
+              <p className="text-xs text-[#737373]">Военнослужащим и их семьям</p>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-2">
-            {navigation.map(item => <a key={item.name} href={item.href} className="px-4 py-2 text-sm text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-colors">
+          <nav className="hidden lg:flex items-center gap-1">
+            {navigation.map(item => (
+              <a 
+                key={item.name} 
+                href={item.href} 
+                className="px-5 py-2.5 text-sm font-medium text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-all duration-200 border border-transparent hover:border-[#2c5f8d]/20"
+              >
                 {item.name}
-              </a>)}
+              </a>
+            ))}
           </nav>
 
           {/* Right Actions */}

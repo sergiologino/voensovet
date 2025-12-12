@@ -100,7 +100,14 @@ export function ProfilePage() {
   const exportToPDF = async (requestIds?: number[]) => {
     try {
       const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
       
       const requestsToExport = requestIds 
         ? aiRequests.filter(r => requestIds.includes(r.id))
@@ -111,80 +118,138 @@ export function ProfilePage() {
         return;
       }
 
-      let yPosition = 20;
+      const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
       const margin = 20;
+      const footerHeight = 15;
+      const headerHeight = 20;
+      let yPosition = headerHeight + 10;
       const lineHeight = 6;
-      const maxWidth = doc.internal.pageSize.width - 2 * margin;
+      const maxWidth = pageWidth - 2 * margin;
 
-      // Заголовок
-      doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(44, 95, 141); // #2c5f8d
-      doc.text('История AI запросов', margin, yPosition);
-      yPosition += 10;
+      // Функция для добавления колонтитулов
+      const addHeaderFooter = (pageNum: number, totalPages: number, requestTitle?: string) => {
+        // Верхний колонтитул
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(115, 115, 115); // #737373
+        // Используем латиницу для колонтитулов, чтобы избежать проблем с кодировкой
+        doc.text('Portal Podderzhki Voennosluzhashchih', margin, 10);
+        doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
+        
+        // Нижний колонтитул
+        doc.setFontSize(9);
+        if (requestTitle) {
+          const titleText = requestTitle.length > 60 ? requestTitle.substring(0, 60) + '...' : requestTitle;
+          // Транслитерация для нижнего колонтитула
+          const translitTitle = titleText
+            .replace(/[а-яё]/gi, (char) => {
+              const map: Record<string, string> = {
+                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+                'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+                'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+                'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+              };
+              return map[char.toLowerCase()] || char;
+            });
+          doc.text(`Topic: ${translitTitle}`, margin, pageHeight - 5);
+        }
+        doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: 'right' });
+      };
 
-      doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
-      doc.setTextColor(115, 115, 115); // #737373
-      doc.text(`Портал Поддержки Военнослужащих | Экспорт от ${new Date().toLocaleDateString('ru-RU')}`, margin, yPosition);
-      yPosition += 10;
+      // Подсчитываем общее количество страниц (приблизительно)
+      let estimatedPages = 1;
+      requestsToExport.forEach(req => {
+        const question = req.primary_prompt || 'Нет вопроса';
+        const answer = req.secondary_response || 'Нет ответа';
+        const contentLength = question.length + answer.length;
+        estimatedPages += Math.ceil(contentLength / 2000); // Примерно 2000 символов на страницу
+      });
+
+      let currentPage = 1;
+      addHeaderFooter(currentPage, estimatedPages);
 
       requestsToExport.forEach((req, index) => {
+        const question = req.primary_prompt || 'Нет вопроса';
+        const fullAnswer = req.secondary_response || 'Нет ответа';
+        
+        // Получаем тему из вопроса (первые 50 символов)
+        const requestTitle = question.length > 50 ? question.substring(0, 50) + '...' : question;
+        
         // Проверяем, нужна ли новая страница
-        if (yPosition > pageHeight - 50) {
+        if (yPosition > pageHeight - footerHeight - 30) {
+          currentPage++;
           doc.addPage();
-          yPosition = 20;
+          addHeaderFooter(currentPage, estimatedPages, requestTitle);
+          yPosition = headerHeight + 10;
         }
 
         // Заголовок запроса
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(38, 38, 38); // #262626
-        doc.text(`Запрос #${req.id}`, margin, yPosition);
-        yPosition += lineHeight + 2;
+        const requestTitleLines = doc.splitTextToSize(`Запрос #${req.id}`, maxWidth);
+        requestTitleLines.forEach((line: string) => {
+          if (yPosition > pageHeight - footerHeight - 20) {
+            currentPage++;
+            doc.addPage();
+            addHeaderFooter(currentPage, estimatedPages, requestTitle);
+            yPosition = headerHeight + 10;
+          }
+          doc.text(line, margin, yPosition);
+          yPosition += lineHeight;
+        });
+        yPosition += 2;
 
         // Дата и метаданные
         doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(163, 163, 163); // #a3a3a3
         const date = new Date(req.created_at).toLocaleString('ru-RU');
-        doc.text(`Дата: ${date}`, margin, yPosition);
+        doc.text(`Date: ${date}`, margin, yPosition);
         if (req.network_used) {
-          doc.text(`Сеть: ${req.network_used}`, margin + 80, yPosition);
+          doc.text(`Network: ${req.network_used}`, margin + 80, yPosition);
         }
         yPosition += lineHeight + 3;
 
         // Вопрос
         doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(64, 64, 64); // #404040
-        doc.text('Вопрос:', margin, yPosition);
+        doc.text('Question:', margin, yPosition);
         yPosition += lineHeight;
         
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        const question = req.primary_prompt || 'Нет вопроса';
         // Убираем markdown форматирование для PDF
         const cleanQuestion = question.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '');
+        // Используем правильную кодировку для кириллицы
         const questionLines = doc.splitTextToSize(cleanQuestion, maxWidth);
         questionLines.forEach((line: string) => {
-          if (yPosition > pageHeight - 30) {
+          if (yPosition > pageHeight - footerHeight - 10) {
+            currentPage++;
             doc.addPage();
-            yPosition = 20;
+            addHeaderFooter(currentPage, estimatedPages, requestTitle);
+            yPosition = headerHeight + 10;
           }
-          doc.text(line, margin, yPosition);
+          // Используем правильную кодировку для кириллицы
+          try {
+            doc.text(line, margin, yPosition, { encoding: 'UTF8' });
+          } catch (e) {
+            // Fallback для символов, которые не поддерживаются
+            doc.text(line, margin, yPosition);
+          }
           yPosition += lineHeight;
         });
         yPosition += 4;
 
         // Ответ
-        doc.setFont(undefined, 'bold');
-        doc.text('Ответ:', margin, yPosition);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Answer:', margin, yPosition);
         yPosition += lineHeight;
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         
-        const fullAnswer = req.secondary_response || 'Нет ответа';
         // Упрощаем markdown для PDF (убираем форматирование, но сохраняем структуру)
         let cleanAnswer = fullAnswer
           .replace(/\*\*/g, '') // Убираем жирный
@@ -194,23 +259,49 @@ export function ProfilePage() {
         
         const answerLines = doc.splitTextToSize(cleanAnswer, maxWidth);
         answerLines.forEach((line: string) => {
-          if (yPosition > pageHeight - 20) {
+          if (yPosition > pageHeight - footerHeight - 10) {
+            currentPage++;
             doc.addPage();
-            yPosition = 20;
+            addHeaderFooter(currentPage, estimatedPages, requestTitle);
+            yPosition = headerHeight + 10;
           }
-          doc.text(line, margin, yPosition);
+          // Используем правильную кодировку для кириллицы
+          try {
+            doc.text(line, margin, yPosition, { encoding: 'UTF8' });
+          } catch (e) {
+            // Fallback для символов, которые не поддерживаются
+            doc.text(line, margin, yPosition);
+          }
           yPosition += lineHeight;
         });
 
         // Разделитель между запросами
         yPosition += 8;
         if (index < requestsToExport.length - 1) {
+          if (yPosition > pageHeight - footerHeight - 10) {
+            currentPage++;
+            doc.addPage();
+            addHeaderFooter(currentPage, estimatedPages);
+            yPosition = headerHeight + 10;
+          }
           doc.setDrawColor(229, 229, 229); // #e5e5e5
           doc.setLineWidth(0.5);
-          doc.line(margin, yPosition, doc.internal.pageSize.width - margin, yPosition);
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
           yPosition += 12;
         }
       });
+      
+      // Обновляем колонтитулы на всех страницах с правильным количеством
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const req = requestsToExport.find((r, idx) => {
+          // Находим запрос для этой страницы (упрощенно)
+          return idx === Math.floor((i - 1) / 2);
+        });
+        const requestTitle = req ? (req.primary_prompt || 'Нет вопроса').substring(0, 50) : undefined;
+        addHeaderFooter(i, totalPages, requestTitle);
+      }
 
       const fileName = requestIds && requestIds.length === 1
         ? `ai-request-${requestIds[0]}.pdf`
