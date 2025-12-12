@@ -30,7 +30,7 @@ async function createTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
-      phone VARCHAR(20) UNIQUE,
+      phone VARCHAR(50) UNIQUE,
       email VARCHAR(255) UNIQUE,
       password_hash VARCHAR(255),
       full_name VARCHAR(255),
@@ -40,6 +40,18 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+  
+  // Обновляем существующую таблицу если поле phone меньше
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'users' AND column_name = 'phone' 
+                 AND character_maximum_length < 50) THEN
+        ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(50);
+      END IF;
+    END $$;
   `);
 
   // Таблица сессий

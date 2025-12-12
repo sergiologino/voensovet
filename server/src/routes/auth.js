@@ -22,23 +22,60 @@ function validateSimpleCaptcha(captchaValue) {
   return captchaValue && captchaValue.length > 0;
 }
 
+// Функция для определения типа контакта (телефон или email)
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+// Функция для очистки телефона от форматирования
+function cleanPhone(phone) {
+  // Убираем все кроме цифр и +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  // Если начинается с +7, оставляем как есть, иначе добавляем +7
+  if (cleaned.startsWith('+7')) {
+    return cleaned;
+  } else if (cleaned.startsWith('7')) {
+    return '+' + cleaned;
+  } else if (cleaned.startsWith('8')) {
+    return '+7' + cleaned.substring(1);
+  } else {
+    return '+7' + cleaned;
+  }
+}
+
 // Регистрация
 router.post('/register', authLimiter, async (req, res, next) => {
   try {
     const { phone, password, fullName, captcha } = req.body;
 
     if (!phone || !password) {
-      return res.status(400).json({ error: 'Телефон и пароль обязательны' });
+      return res.status(400).json({ error: 'Контакт (телефон или email) и пароль обязательны' });
     }
 
     if (!validateSimpleCaptcha(captcha)) {
       return res.status(400).json({ error: 'Проверка капчи не пройдена' });
     }
 
-    // Проверяем существует ли пользователь
-    const existingUser = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'Пользователь с таким телефоном уже существует' });
+    // Определяем тип контакта
+    const isEmailContact = isEmail(phone);
+    let phoneValue = null;
+    let emailValue = null;
+
+    if (isEmailContact) {
+      emailValue = phone.toLowerCase().trim();
+      // Проверяем существует ли пользователь с таким email
+      const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [emailValue]);
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+      }
+    } else {
+      // Очищаем телефон от форматирования
+      phoneValue = cleanPhone(phone);
+      // Проверяем существует ли пользователь с таким телефоном
+      const existingUser = await pool.query('SELECT id FROM users WHERE phone = $1', [phoneValue]);
+      if (existingUser.rows.length > 0) {
+        return res.status(400).json({ error: 'Пользователь с таким телефоном уже существует' });
+      }
     }
 
     // Хешируем пароль
@@ -46,10 +83,10 @@ router.post('/register', authLimiter, async (req, res, next) => {
 
     // Создаем пользователя
     const result = await pool.query(
-      `INSERT INTO users (phone, password_hash, full_name, provider)
-       VALUES ($1, $2, $3, 'local')
+      `INSERT INTO users (phone, email, password_hash, full_name, provider)
+       VALUES ($1, $2, $3, $4, 'local')
        RETURNING id, phone, email, full_name, is_admin, created_at`,
-      [phone, passwordHash, fullName || null]
+      [phoneValue, emailValue, passwordHash, fullName || null]
     );
 
     const user = result.rows[0];
@@ -95,31 +132,42 @@ router.post('/login', authLimiter, async (req, res, next) => {
     const { phone, password, captcha } = req.body;
 
     if (!phone || !password) {
-      return res.status(400).json({ error: 'Телефон и пароль обязательны' });
+      return res.status(400).json({ error: 'Контакт (телефон или email) и пароль обязательны' });
     }
 
     if (!validateSimpleCaptcha(captcha)) {
       return res.status(400).json({ error: 'Проверка капчи не пройдена' });
     }
 
-    // Находим пользователя
-    const result = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
+    // Определяем тип контакта и ищем пользователя
+    const isEmailContact = isEmail(phone);
+    let query, queryValue;
+    
+    if (isEmailContact) {
+      query = 'SELECT * FROM users WHERE email = $1';
+      queryValue = phone.toLowerCase().trim();
+    } else {
+      query = 'SELECT * FROM users WHERE phone = $1';
+      queryValue = cleanPhone(phone);
+    }
+    
+    const result = await pool.query(query, [queryValue]);
     
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Неверный телефон или пароль' });
+      return res.status(401).json({ error: 'Неверный контакт или пароль' });
     }
 
     const user = result.rows[0];
 
     // Проверяем пароль
     if (!user.password_hash) {
-      return res.status(401).json({ error: 'Неверный телефон или пароль' });
+      return res.status(401).json({ error: 'Неверный контакт или пароль' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Неверный телефон или пароль' });
+      return res.status(401).json({ error: 'Неверный контакт или пароль' });
     }
 
     // Создаем сессию
