@@ -1,5 +1,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Проверка и предупреждение если используется HTTPS для localhost
+if (API_BASE_URL.startsWith('https://localhost') || API_BASE_URL.startsWith('https://127.0.0.1')) {
+  console.warn('⚠️ ВНИМАНИЕ: Используется HTTPS для localhost. Для локальной разработки используйте HTTP: http://localhost:3001');
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}

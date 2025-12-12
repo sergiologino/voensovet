@@ -70,9 +70,16 @@ AI_SERVICE_API_KEY=your-api-key-from-ai-service
 |-----------|--------|----------|
 | `PORT` | `3001` | Порт, на котором будет запущен backend сервер |
 | `NODE_ENV` | `development` | Режим работы: `development` или `production`. В production включаются дополнительные проверки безопасности |
-| `FRONTEND_URL` | `http://localhost:5173` | URL фронтенд приложения. Используется для CORS и OAuth редиректов. Для продакшена: `https://your-domain.com` |
+| `FRONTEND_URL` | `http://localhost:5173` | URL фронтенд приложения. Используется для CORS и OAuth редиректов. **ВАЖНО:** Для локальной разработки используйте `http://localhost:5173` (не `https://`). Для продакшена: `https://your-domain.com` |
 
-**Пример:**
+**Пример для локальной разработки:**
+```bash
+PORT=3001
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+```
+
+**Пример для продакшена:**
 ```bash
 PORT=3001
 NODE_ENV=production
