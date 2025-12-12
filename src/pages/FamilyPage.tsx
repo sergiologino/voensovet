@@ -4,6 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
+import { SEO } from '../components/seo/SEO';
 import {
   UsersIcon,
   HeartIcon,
@@ -94,7 +95,14 @@ export function FamilyPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEO
+        title="Я член семьи военнослужащего"
+        description="Поддержка для семей военнослужащих: психологическая помощь, социальная поддержка, льготы семьям военных, помощь детям военнослужащих, консультации для родственников."
+        keywords="помощь семьям военнослужащих, поддержка семей военных, льготы семьям военных, помощь детям военных, психологическая помощь семьям военных"
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#family"
+      />
+      <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -238,7 +246,8 @@ export function FamilyPage() {
       </main>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 

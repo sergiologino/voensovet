@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { SEO } from '../components/seo/SEO';
 import { UserIcon, History, Settings } from 'lucide-react';
 
 export function ProfilePage() {
@@ -97,7 +98,14 @@ export function ProfilePage() {
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEO
+        title="Личный кабинет"
+        description="Личный кабинет пользователя портала поддержки военнослужащих: профиль, история запросов, настройки."
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#profile"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-[#262626] mb-8">Личный кабинет</h1>

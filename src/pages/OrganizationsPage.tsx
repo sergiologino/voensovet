@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { SEO } from '../components/seo/SEO';
 import {
   BuildingIcon,
   SearchIcon,
@@ -221,7 +222,14 @@ export function OrganizationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEO
+        title="Организации помощи"
+        description="Организации помощи военнослужащим: государственные службы, фонды, НКО, медицинские центры. Контакты, адреса, телефоны организаций помощи военным."
+        keywords="организации помощи военнослужащим, фонды помощи военным, НКО для военных, государственные службы помощи, медицинские центры для военных"
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#organizations"
+      />
+      <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -404,7 +412,8 @@ export function OrganizationsPage() {
       </main>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 

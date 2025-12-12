@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { SEO } from '../components/seo/SEO';
 import {
   ScaleIcon,
   SearchIcon,
@@ -217,7 +218,14 @@ export function BenefitsPage() {
     .filter((category) => category.benefits.length > 0);
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEO
+        title="Права и льготы"
+        description="Права и льготы военнослужащих: жилищные льготы, медицинское обслуживание, образование, транспортные льготы, финансовые выплаты, пенсии. Полная информация о правах военнослужащих."
+        keywords="льготы военнослужащим, права военнослужащих, жилищные льготы военным, медицинские льготы, образование для военных, пенсии военнослужащих, выплаты военным"
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#benefits"
+      />
+      <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -368,7 +376,8 @@ export function BenefitsPage() {
       </main>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 

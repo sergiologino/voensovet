@@ -6,6 +6,7 @@ import { OrganizationCard } from '../components/help/OrganizationCard';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
 import { AiAssistant } from '../components/ai/AiAssistant';
+import { SEO } from '../components/seo/SEO';
 import { HeartIcon, StethoscopeIcon, UsersIcon, ScaleIcon, SearchIcon } from 'lucide-react';
 export function HelpPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -53,7 +54,15 @@ export function HelpPage() {
     hours: 'Ежедневно 8:00-22:00',
     isAvailableNow: true
   }];
-  return <div className="min-h-screen bg-white">
+  return (
+    <>
+      <SEO
+        title="Мне нужна помощь"
+        description="Получите помощь и поддержку: психологическая помощь, медицинская помощь, социальная поддержка, юридическая помощь. Горячие линии, консультации, организации помощи военнослужащим."
+        keywords="помощь военнослужащим, психологическая помощь, медицинская помощь военным, социальная поддержка, юридическая помощь военнослужащим, горячие линии помощи"
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#help"
+      />
+      <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -150,5 +159,7 @@ export function HelpPage() {
       </main>
 
       <Footer />
-    </div>;
+      </div>
+    </>
+  );
 }

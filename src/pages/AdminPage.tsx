@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { api } from '../api/client';
+import { SEO } from '../components/seo/SEO';
 import { Settings, Users, BarChart3 } from 'lucide-react';
 
 export function AdminPage() {
@@ -98,7 +99,14 @@ export function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEO
+        title="Панель администратора"
+        description="Административная панель портала поддержки военнослужащих."
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#admin"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-[#262626] mb-8">Панель администратора</h1>
@@ -288,7 +296,8 @@ export function AdminPage() {
         )}
       </main>
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 

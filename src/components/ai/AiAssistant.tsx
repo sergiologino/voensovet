@@ -4,6 +4,7 @@ import { Alert } from '../ui/Alert';
 import { useAuth } from '../../context/AuthContext';
 import { useRegionContext } from '../../context/RegionContext';
 import { api } from '../../api/client';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { Bot, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function AiAssistant() {
@@ -58,7 +59,9 @@ export function AiAssistant() {
   const handleExampleClick = (example: string) => {
     setQuery(example);
     setError(null);
-    setAnswer(null);
+    setShortAnswer(null);
+    setDetailedAnswer(null);
+    setShowDetailed(false);
   };
 
   return (
@@ -154,9 +157,7 @@ export function AiAssistant() {
               <Bot size={18} className="text-[#2c5f8d]" />
               Краткий ответ:
             </h3>
-            <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
-              {shortAnswer}
-            </div>
+            <MarkdownRenderer content={shortAnswer} />
           </div>
 
           {/* Подробный ответ под спойлером */}
@@ -178,9 +179,7 @@ export function AiAssistant() {
               
               {showDetailed && (
                 <div className="p-4 bg-white">
-                  <div className="text-[#404040] whitespace-pre-wrap leading-relaxed">
-                    {detailedAnswer}
-                  </div>
+                  <MarkdownRenderer content={detailedAnswer} />
                 </div>
               )}
             </div>

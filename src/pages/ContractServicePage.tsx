@@ -4,6 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { ContractOfferCard } from '../components/contract/ContractOfferCard';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
+import { SEO } from '../components/seo/SEO';
 import { SearchIcon, FilterIcon } from 'lucide-react';
 export function ContractServicePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,7 +59,15 @@ export function ContractServicePage() {
     const matchesSpecialty = selectedSpecialty === 'all' || offer.specialty === selectedSpecialty;
     return matchesSearch && matchesRegion && matchesSpecialty;
   });
-  return <div className="min-h-screen bg-white">
+  return (
+    <>
+      <SEO
+        title="Служба по контракту"
+        description="Вакансии службы по контракту: условия службы, требования, льготы контрактников, регионы службы, специальности, карьерный рост в вооруженных силах."
+        keywords="служба по контракту, вакансии военных, контрактная служба, военная служба по контракту, вакансии в армии, служба по контракту условия"
+        canonical="https://sergiologino-voensovet-1e9f.twc1.net#contract-service"
+      />
+      <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -201,5 +210,7 @@ export function ContractServicePage() {
       </main>
 
       <Footer />
-    </div>;
+      </div>
+    </>
+  );
 }
