@@ -239,7 +239,8 @@ export function ProfilePage() {
 
       </main>
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 
