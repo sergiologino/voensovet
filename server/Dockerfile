@@ -4,12 +4,12 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
-# ВАЖНО: Убедитесь, что package.json существует в папке server/
+# Копируем package.json и package-lock.json (если есть)
 COPY package*.json ./
 
 # Устанавливаем зависимости
-RUN npm ci --only=production
+# Используем npm ci если есть package-lock.json, иначе npm install
+RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --only=production; fi
 
 # Копируем исходный код
 # ВАЖНО: Убедитесь, что папка src/ существует и содержит файлы сервера
