@@ -5,13 +5,14 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Копируем package.json и package-lock.json
+# ВАЖНО: Убедитесь, что package.json существует в папке server/
 COPY package*.json ./
 
 # Устанавливаем зависимости
-# Используем npm ci для production или npm install для dev
 RUN npm ci --only=production
 
 # Копируем исходный код
+# ВАЖНО: Убедитесь, что папка src/ существует и содержит файлы сервера
 COPY src ./src
 
 # Переменные окружения будут переданы из настроек Timeweb
