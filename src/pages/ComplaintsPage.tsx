@@ -5,7 +5,6 @@ import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { SEO } from '../components/seo/SEO';
 import {
   AlertCircleIcon,
   ShieldIcon,
@@ -103,14 +102,7 @@ export function ComplaintsPage() {
   };
 
   return (
-    <>
-      <SEO
-        title="Жалобы и обращения"
-        description="Подача жалоб и обращений военнослужащих: защита прав, обращение в надзорные органы, жалобы на действия командования, консультации по защите прав военнослужащих."
-        keywords="жалобы военнослужащих, защита прав военных, обращения военнослужащих, жалобы на командование, защита прав военных"
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#complaints"
-      />
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -363,8 +355,7 @@ export function ComplaintsPage() {
       </main>
 
       <Footer />
-      </div>
-    </>
+    </div>
   );
 }
 

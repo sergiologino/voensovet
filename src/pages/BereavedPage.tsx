@@ -4,7 +4,6 @@ import { Footer } from '../components/layout/Footer';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { SEO } from '../components/seo/SEO';
 import {
   HeartIcon,
   HomeIcon,
@@ -110,14 +109,7 @@ export function BereavedPage() {
   ];
 
   return (
-    <>
-      <SEO
-        title="Я из семьи погибшего"
-        description="Помощь семьям погибших военнослужащих: психологическая поддержка, материальная помощь, льготы семьям погибших, консультации, группы поддержки."
-        keywords="помощь семьям погибших военных, поддержка семей погибших, льготы семьям погибших военнослужащих, психологическая помощь семьям погибших"
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#bereaved"
-      />
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -300,8 +292,7 @@ export function BereavedPage() {
       </main>
 
       <Footer />
-      </div>
-    </>
+    </div>
   );
 }
 

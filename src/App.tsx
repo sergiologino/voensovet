@@ -9,12 +9,7 @@ import { BenefitsPage } from './pages/BenefitsPage';
 import { ComplaintsPage } from './pages/ComplaintsPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
 import { ReturnToLifePage } from './pages/ReturnToLifePage';
-import { ProfilePage } from './pages/ProfilePage';
-import { AdminPage } from './pages/AdminPage';
-import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { RegionProvider } from './context/RegionContext';
-import { AuthProvider } from './context/AuthContext';
-import { PageTracker } from './components/PageTracker';
 
 function AppContent() {
   // Simple routing simulation
@@ -36,22 +31,12 @@ function AppContent() {
         'organizations': 'organizations',
         'return': 'return',
         'psychological': 'help',
-        'profile': 'profile',
-        'admin': 'admin',
       };
       setCurrentPage(routes[hash] || 'home');
     };
     handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  // Handle auth callback
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('token')) {
-      setCurrentPage('auth-callback');
-    }
   }, []);
 
   // Scroll to top on page change
@@ -70,9 +55,6 @@ function AppContent() {
     'complaints': <ComplaintsPage />,
     'organizations': <OrganizationsPage />,
     'return': <ReturnToLifePage />,
-    'profile': <ProfilePage />,
-    'admin': <AdminPage />,
-    'auth-callback': <AuthCallbackPage />,
   };
 
   return pages[currentPage] || <HomePage />;
@@ -80,11 +62,8 @@ function AppContent() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <RegionProvider>
-        <PageTracker />
-        <AppContent />
-      </RegionProvider>
-    </AuthProvider>
+    <RegionProvider>
+      <AppContent />
+    </RegionProvider>
   );
 }

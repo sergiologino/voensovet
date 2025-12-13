@@ -4,7 +4,6 @@ import { Footer } from '../components/layout/Footer';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { SEO } from '../components/seo/SEO';
 import {
   ShieldIcon,
   HeartIcon,
@@ -99,14 +98,7 @@ export function VeteranPage() {
   ];
 
   return (
-    <>
-      <SEO
-        title="Я вернулся из зоны боевых действий"
-        description="Помощь военнослужащим, вернувшимся из зоны боевых действий: адаптация, права, льготы, психологическая помощь, медицинская реабилитация, трудоустройство."
-        keywords="помощь вернувшимся военным, адаптация военнослужащих, реабилитация военных, права вернувшихся военных, льготы военнослужащим, психологическая помощь военным"
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#veteran"
-      />
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -251,8 +243,7 @@ export function VeteranPage() {
       </main>
 
       <Footer />
-      </div>
-    </>
+    </div>
   );
 }
 

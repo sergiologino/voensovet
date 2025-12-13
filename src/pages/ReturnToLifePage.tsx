@@ -4,7 +4,6 @@ import { Footer } from '../components/layout/Footer';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { SEO } from '../components/seo/SEO';
 import {
   HeartPulseIcon,
   BriefcaseIcon,
@@ -148,14 +147,7 @@ export function ReturnToLifePage() {
   ];
 
   return (
-    <>
-      <SEO
-        title="Возвращение к жизни"
-        description="Программы возвращения к жизни для военнослужащих: медицинская реабилитация, профессиональная переподготовка, трудоустройство, социальная адаптация, психологическая поддержка."
-        keywords="реабилитация военнослужащих, возвращение к жизни, переподготовка военных, трудоустройство военнослужащих, адаптация военных, программы реабилитации"
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#return"
-      />
-      <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <main className="py-12 lg:py-16">
@@ -306,8 +298,7 @@ export function ReturnToLifePage() {
       </main>
 
       <Footer />
-      </div>
-    </>
+    </div>
   );
 }
 

@@ -21,6 +21,18 @@ COPY tailwind.config.js ./
 COPY postcss.config.js ./
 COPY src ./src
 
+# ARG для переменных окружения во время сборки (опционально)
+# Timeweb APP Platform может передавать переменные через build args или напрямую в ENV
+# Если переменные передаются через build args, используйте: docker build --build-arg VITE_API_URL=...
+ARG VITE_API_URL
+ARG VITE_API_BASE_URL
+
+# Устанавливаем переменные окружения для сборки
+# Vite автоматически подхватит переменные с префиксом VITE_ из окружения во время сборки
+# Если ARG не передан, переменная будет пустой, но если она есть в ENV контейнера - будет использована
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
 # Build the application
 RUN npm run build
 
