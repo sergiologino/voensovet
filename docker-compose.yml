@@ -23,8 +23,7 @@ services:
       retries: 3
       start_period: 40s
     depends_on:
-      api:
-        condition: service_healthy
+      - api
 
   # Backend (Node.js сервер)
   api:
@@ -57,8 +56,8 @@ services:
       # Other
       - FRONTEND_URL=${FRONTEND_URL}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${PORT:-3001}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

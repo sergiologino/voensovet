@@ -4,6 +4,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Устанавливаем wget для health check
+RUN apk add --no-cache wget
+
 # Копируем package.json и package-lock.json (если есть)
 COPY package*.json ./
 
