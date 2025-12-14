@@ -8,12 +8,12 @@ services:
       context: ./server
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "3002:3002"
     restart: unless-stopped
     environment:
       # Переменные пробрасываются из хоста (настройки Timeweb)
       - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3001
+      - PORT=3002
       # Database
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -33,7 +33,7 @@ services:
       # Other
       - FRONTEND_URL=${FRONTEND_URL}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,8 +46,8 @@ services:
       dockerfile: Dockerfile
       args:
         # Переменные для сборки фронтенда
-        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3001}
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3001/api}
+        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3002}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3002/api}
     ports:
       - "80:80"
     restart: unless-stopped
