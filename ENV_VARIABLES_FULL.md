@@ -23,7 +23,7 @@ JWT_EXPIRES_IN=7d
 ```env
 YANDEX_CLIENT_ID=your-yandex-client-id
 YANDEX_CLIENT_SECRET=your-yandex-client-secret
-YANDEX_REDIRECT_URI=https://sergiologino-voensovet-1e9f.twc1.net/api/auth/yandex/callback
+YANDEX_REDIRECT_URI=https://voensovet.ru/api/auth/yandex/callback
 ```
 
 ### AI Service Integration
@@ -36,13 +36,18 @@ AI_SERVICE_API_KEY=5DDE26C2196CB9FA56A4DF5B466C7E2D2C1FA62BA10BDA1B
 ```env
 PORT=3001
 NODE_ENV=production
-FRONTEND_URL=https://sergiologino-voensovet-1e9f.twc1.net
+FRONTEND_URL=https://voensovet.ru
 ```
 
 ### Frontend Build Variables (с префиксом VITE_)
 ```env
-VITE_API_URL=http://localhost:3001
-VITE_API_BASE_URL=http://localhost:3001/api
+# Вариант 1: API на отдельном порту
+VITE_API_URL=https://voensovet.ru:3001
+VITE_API_BASE_URL=https://voensovet.ru:3001/api
+
+# Вариант 2: API через прокси (если настроен)
+# VITE_API_URL=https://voensovet.ru/api
+# VITE_API_BASE_URL=https://voensovet.ru/api
 ```
 
 ## Проверка переменных

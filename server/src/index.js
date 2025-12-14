@@ -1,5 +1,6 @@
 // Точка входа сервера
 const express = require('express');
+const { initializeDatabase, pool, query } = require('./db/init');
 const app = express();
 
 const PORT = process.env.PORT || 3001;
@@ -21,6 +22,31 @@ console.log('AI_SERVICE_URL:', process.env.AI_SERVICE_URL ? '[SET]' : '[NOT SET]
 console.log('AI_SERVICE_API_KEY:', process.env.AI_SERVICE_API_KEY ? '[SET]' : '[NOT SET]');
 console.log('FRONTEND_URL:', process.env.FRONTEND_URL ? '[SET]' : '[NOT SET]');
 console.log('======================');
+
+// CORS middleware
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://voensovet.ru',
+    'https://sergiologino-voensovet-1e9f.twc1.net',
+    'http://localhost:5173', // для разработки
+    'http://localhost:8080'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 // Middleware
 app.use(express.json());
@@ -85,10 +111,29 @@ app.get('/debug/env', (req, res) => {
   });
 });
 
-// Запуск сервера
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server is running on port ${PORT}`);
-  console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✅ Health check: http://localhost:${PORT}/health`);
-});
+// Функция запуска сервера с инициализацией БД
+async function startServer() {
+  try {
+    // Инициализируем БД
+    const dbInitialized = await initializeDatabase();
+    
+    if (!dbInitialized) {
+      console.error('⚠️ Database initialization failed, but server will start anyway');
+    }
+    
+    // Запускаем сервер
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server is running on port ${PORT}`);
+      console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✅ Health check: http://localhost:${PORT}/health`);
+      console.log(`✅ API URL: http://voensovet.ru:${PORT} or http://voensovet.ru/api`);
+    });
+  } catch (error) {
+    console.error('❌ Server startup error:', error);
+    process.exit(1);
+  }
+}
+
+// Запускаем сервер
+startServer();
 
