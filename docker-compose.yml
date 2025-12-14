@@ -2,41 +2,18 @@
 version: '3.8'
 
 services:
-  # Frontend (React приложение)
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        # Переменные для сборки фронтенда
-        - VITE_API_URL=${VITE_API_URL}
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=${NODE_ENV:-production}
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      - api
-
-  # Backend (Node.js сервер)
+  # Backend (Node.js сервер) - запускается первым
   api:
     build:
       context: ./server
       dockerfile: Dockerfile
     ports:
-      - "${PORT:-3001}:${PORT:-3001}"
+      - "3001:3001"
     restart: unless-stopped
     environment:
       # Переменные пробрасываются из хоста (настройки Timeweb)
       - NODE_ENV=${NODE_ENV:-production}
-      - PORT=${PORT:-3001}
+      - PORT=3001
       # Database
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -61,3 +38,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  # Frontend (React приложение) - запускается вторым
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Переменные для сборки фронтенда
+        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3001}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3001/api}
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+
