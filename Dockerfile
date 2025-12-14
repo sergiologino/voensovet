@@ -40,6 +40,9 @@ RUN npm run build
 # Stage 2: Serve with nginx
 FROM nginx:alpine
 
+# Install wget for health check
+RUN apk add --no-cache wget
+
 # Copy custom nginx config
 COPY src/nginx.conf /etc/nginx/conf.d/default.conf
 
