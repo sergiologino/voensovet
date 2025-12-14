@@ -12,7 +12,7 @@ COPY package*.json ./
 
 # Устанавливаем зависимости
 # Используем npm ci если есть package-lock.json, иначе npm install
-RUN if [ -f package-lock.json ]; then npm ci --only=production; else npm install --only=production; fi
+RUN if [ -f package-lock.json ]; then npm ci --only=production --legacy-peer-deps; else npm install --only=production --legacy-peer-deps; fi
 
 # Копируем исходный код
 # ВАЖНО: Убедитесь, что папка src/ существует и содержит файлы сервера
