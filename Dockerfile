@@ -10,7 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci --legacy-peer-deps
+# Используем npm install вместо npm ci из-за несинхронизированного package-lock.json
+RUN npm install --legacy-peer-deps
 
 # Copy all source files needed for build
 COPY index.html ./
