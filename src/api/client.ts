@@ -133,6 +133,16 @@ export const api = {
     );
   },
 
+  // Get user's own AI requests
+  async getUserAiRequests() {
+    return request<{ requests: any[] }>('/api/ai/history');
+  },
+
+  // Alias for getUserAiRequests (used in ProfilePage)
+  async getAiHistory(limit = 100, offset = 0) {
+    return request<{ requests: any[] }>(`/api/ai/history?limit=${limit}&offset=${offset}`);
+  },
+
   // AI
   async getAiNetworks() {
     return request<{ networks: any[] }>('/api/ai/networks');
