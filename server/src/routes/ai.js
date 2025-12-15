@@ -376,6 +376,7 @@ router.post('/process', async (req, res, next) => {
 // Получить историю AI запросов пользователя
 router.get('/history', async (req, res, next) => {
   try {
+    console.log('📋 AI History requested by user:', req.user?.id);
     const { limit = 20, offset = 0 } = req.query;
 
     const result = await pool.query(
@@ -393,6 +394,8 @@ router.get('/history', async (req, res, next) => {
       [req.user.id]
     );
 
+    console.log(`✅ Found ${result.rows.length} AI requests for user ${req.user.id}`);
+
     res.json({
       requests: result.rows,
       total: parseInt(countResult.rows[0].count),
@@ -400,6 +403,7 @@ router.get('/history', async (req, res, next) => {
       offset: parseInt(offset)
     });
   } catch (error) {
+    console.error('❌ Error fetching AI history:', error);
     next(error);
   }
 });

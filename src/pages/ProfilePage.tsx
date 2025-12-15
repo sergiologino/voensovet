@@ -75,11 +75,15 @@ export function ProfilePage() {
   };
 
   const loadAiHistory = async () => {
+    console.log('🔄 Loading AI history...');
     setLoadingAiHistory(true);
     try {
       const data = await api.getAiHistory(100, 0);
-      setAiRequests(data.requests);
+      console.log('✅ AI history loaded:', data);
+      console.log('📊 Requests count:', data.requests?.length || 0);
+      setAiRequests(data.requests || []);
     } catch (error: any) {
+      console.error('❌ Error loading AI history:', error);
       setMessage({ type: 'error', text: error.message });
     } finally {
       setLoadingAiHistory(false);

@@ -1,6 +1,7 @@
 # Build trigger file to force Docker rebuild
 # This file changes with every commit to force cache invalidation
-BUILD_TIME=1734267890000
-COMMIT_MSG="FINAL FIX: Grid layout for Header, force rebuild ProfilePage"
+BUILD_TIME=1734268999000
+COMMIT_MSG="ABSOLUTE FINAL: Fix Header justify-between, add console logging to ProfilePage loadAiHistory"
 CRITICAL_FIX=true
+DEBUG_ENABLED=true
 

@@ -35,37 +35,37 @@ export function Header() {
 
   return <header className="bg-white border-b-2 border-[#e5e5e5] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 h-20">
-          {/* Logo and Title - фиксированная ширина слева */}
-          <div className="flex items-center gap-3">
+        <div className="flex justify-between items-center h-20">
+          {/* Logo and Title */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             <img 
               src="/logo-placeholder.png" 
               alt="Портал Поддержки" 
               className="h-12 w-12 object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold text-[#262626] leading-tight">
+              <h1 className="text-2xl font-bold text-[#262626] leading-tight">
                 Портал Поддержки
               </h1>
               <p className="text-xs text-[#737373]">Военнослужащим и их семьям</p>
             </div>
           </div>
 
-          {/* Desktop Navigation - центр, растягивается */}
-          <nav className="hidden lg:flex items-center justify-center gap-1">
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-2 flex-1 justify-center max-w-3xl">
             {navigation.map(item => (
               <a 
                 key={item.name} 
                 href={item.href} 
-                className="px-4 py-2 text-sm font-medium text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-all duration-200"
+                className="px-4 py-2 text-sm font-medium text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-colors whitespace-nowrap"
               >
                 {item.name}
               </a>
             ))}
           </nav>
 
-          {/* Right Actions - фиксированная ширина справа */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Right Actions */}
+          <div className="hidden lg:flex items-center gap-3 flex-shrink-0">
             {/* Region Selector */}
             <button
               onClick={openSelector}
