@@ -103,7 +103,7 @@ export function AdminPage() {
       <SEO
         title="Панель администратора"
         description="Административная панель портала поддержки военнослужащих."
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#admin"
+        canonical="https://voensovet.ru#admin"
         noindex={true}
       />
       <div className="min-h-screen bg-white">

@@ -197,7 +197,7 @@ export function ProfilePage() {
         doc.setFontSize(10);
         doc.setTextColor(115, 115, 115);
         doc.text('Портал Поддержки Военнослужащих', margin + starSize + 2, 10);
-        doc.text('https://sergiologino-voensovet-1e9f.twc1.net', pageWidth - margin, 10, { align: 'right' });
+        doc.text('https://voensovet.ru', pageWidth - margin, 10, { align: 'right' });
         
         // Нижний колонтитул
         doc.setFontSize(9);
@@ -382,7 +382,7 @@ export function ProfilePage() {
       <SEO
         title="Личный кабинет"
         description="Личный кабинет пользователя портала поддержки военнослужащих: профиль, история запросов, настройки."
-        canonical="https://sergiologino-voensovet-1e9f.twc1.net#profile"
+        canonical="https://voensovet.ru#profile"
         noindex={true}
       />
       <div className="min-h-screen bg-white">
