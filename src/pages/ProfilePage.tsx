@@ -1,5 +1,8 @@
-// ProfilePage - User profile with AI requests history
-// Features: PDF export with Cyrillic font, accordion UI, clipboard copy
+/**
+ * ProfilePage - Личный кабинет пользователя
+ * Включает: PDF экспорт с кириллицей, аккордеон, копирование в буфер
+ * Последнее обновление: 2025-12-15
+ */
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
