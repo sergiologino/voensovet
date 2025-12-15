@@ -79,13 +79,6 @@ export function HelpPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {categories.map(category => <HelpCategory key={category.id} icon={category.icon} title={category.title} description={category.description} onClick={() => setSelectedCategory(category.id)} />)}
               </div>
-            </div>
-          </main>
-
-          <AiAssistant />
-
-          <main className="py-0">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             </> :
         // Organization List View (showing psychological help as example)
         <>
@@ -150,6 +143,8 @@ export function HelpPage() {
             </>}
         </div>
       </main>
+
+      <AiAssistant />
 
       <Footer />
     </div>;
