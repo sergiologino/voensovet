@@ -186,6 +186,28 @@ async function createTables() {
     )
   `);
   console.log('✅ ai_requests table created');
+  
+  // МИГРАЦИЯ: Добавляем недостающие колонки в существующую таблицу ai_requests
+  console.log('🔄 Running migrations for ai_requests table...');
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      -- Добавляем primary_response если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'primary_response') THEN
+        ALTER TABLE ai_requests ADD COLUMN primary_response TEXT;
+        RAISE NOTICE 'Column primary_response added to ai_requests table';
+      END IF;
+      
+      -- Добавляем secondary_prompt если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'secondary_prompt') THEN
+        ALTER TABLE ai_requests ADD COLUMN secondary_prompt TEXT;
+        RAISE NOTICE 'Column secondary_prompt added to ai_requests table';
+      END IF;
+    END $$;
+  `);
+  console.log('✅ ai_requests table migrations completed');
 
   // Таблица настроек админа (промпты)
   console.log('📋 Creating admin_settings table...');

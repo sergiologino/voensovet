@@ -114,14 +114,16 @@ router.post('/process', async (req, res, next) => {
 
     const networks = networksResponse.data || [];
     console.log('✅ Networks fetched:', networks.length, 'networks available');
+    console.log('Available networks:', networks.map(n => `${n.name} (priority: ${n.priority})`).join(', '));
     
-    // Сортируем по приоритету: меньший приоритет = выше в списке
-    const sortedNetworks = networks.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+    // Сортируем по приоритету: БОЛЬШИЙ приоритет = выше в списке (обратная сортировка)
+    // Приоритет 90 > Приоритет 1, поэтому 90 должен быть первым
+    const sortedNetworks = networks.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
-    // Первый запрос - сеть с меньшим приоритетом (например, 90)
-    // Второй запрос - сеть с большим приоритетом (например, 100)
-    const firstNetwork = sortedNetworks[0]; // Меньший приоритет (первый запрос)
-    const secondNetwork = sortedNetworks[sortedNetworks.length - 1]; // Больший приоритет (второй запрос)
+    // Первый запрос - сеть с БОЛЬШИМ приоритетом (например, 90)
+    // Второй запрос - сеть с МЕНЬШИМ приоритетом (например, 1 или 15)
+    const firstNetwork = sortedNetworks[0]; // Больший приоритет (первый запрос - быстрый анализ)
+    const secondNetwork = sortedNetworks[sortedNetworks.length - 1]; // Меньший приоритет (второй запрос - детальный ответ)
 
     if (!firstNetwork || !secondNetwork) {
       throw new Error('Не найдены доступные нейросети');
