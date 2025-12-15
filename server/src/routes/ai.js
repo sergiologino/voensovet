@@ -353,7 +353,7 @@ router.post('/process', async (req, res, next) => {
       shortAnswer: shortAnswer,
       detailedAnswer: detailedAnswer,
       analysis: primaryAnalysis,
-      networkUsed: `${minPriorityNetwork.name} -> ${maxPriorityNetwork.name}`,
+      networkUsed: `${firstNetwork.name} -> ${secondNetwork.name}`,
       tokensUsed: (primaryResponse.data.tokensUsed || 0) + (secondaryResponse.data.tokensUsed || 0),
       executionTimeMs: (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
     });
