@@ -20,6 +20,7 @@ COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
+COPY .buildtrigger ./
 COPY public ./public
 COPY src ./src
 

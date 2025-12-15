@@ -1,0 +1,5 @@
+# Build trigger file to force Docker rebuild
+# This file changes with every commit to force cache invalidation
+BUILD_TIME=1734264720000
+COMMIT_MSG="Force rebuild - add all ProfilePage features"
+

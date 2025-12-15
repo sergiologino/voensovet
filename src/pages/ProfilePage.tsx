@@ -1,4 +1,5 @@
-// ProfilePage - User profile with AI requests history, PDF export, accordion UI
+// ProfilePage - User profile with AI requests history
+// Features: PDF export with Cyrillic font, accordion UI, clipboard copy
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';

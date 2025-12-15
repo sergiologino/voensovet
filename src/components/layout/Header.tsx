@@ -35,9 +35,9 @@ export function Header() {
 
   return <header className="bg-white border-b-2 border-[#e5e5e5] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20 gap-8">
-          {/* Logo and Title - сдвинут влево */}
-          <div className="flex items-center gap-3 flex-shrink-0 mr-8">
+        <div className="flex items-center h-20">
+          {/* Logo and Title - симметрично кнопке ЛК */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             <img 
               src="/logo-placeholder.png" 
               alt="Портал Поддержки" 
@@ -51,8 +51,8 @@ export function Header() {
             </div>
           </div>
 
-          {/* Desktop Navigation - больше отступы */}
-          <nav className="hidden lg:flex items-center gap-2 flex-1 justify-center">
+          {/* Desktop Navigation - по центру между логотипом и кнопками */}
+          <nav className="hidden lg:flex items-center gap-2 flex-1 justify-center mx-8">
             {navigation.map(item => (
               <a 
                 key={item.name} 
@@ -64,8 +64,8 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Right Actions - больше отступы */}
-          <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
+          {/* Right Actions - симметрично логотипу */}
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0 ml-auto">
             {/* Region Selector */}
             <button
               onClick={openSelector}
