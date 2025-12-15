@@ -10,6 +10,7 @@ import { ComplaintsPage } from './pages/ComplaintsPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
 import { ReturnToLifePage } from './pages/ReturnToLifePage';
 import { RegionProvider } from './context/RegionContext';
+import { AuthProvider } from './context/AuthContext';
 
 function AppContent() {
   // Simple routing simulation
@@ -62,8 +63,10 @@ function AppContent() {
 
 export function App() {
   return (
-    <RegionProvider>
-      <AppContent />
-    </RegionProvider>
+    <AuthProvider>
+      <RegionProvider>
+        <AppContent />
+      </RegionProvider>
+    </AuthProvider>
   );
 }

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { MenuIcon, XIcon, UserIcon, MapPinIcon, ChevronDownIcon } from 'lucide-react';
+import { MenuIcon, XIcon, UserIcon, MapPinIcon, ChevronDownIcon, LogOutIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useRegionContext } from '../../context/RegionContext';
+import { useAuth } from '../../context/AuthContext';
+import { AuthModal } from '../auth/AuthModal';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const { region, isLoading, openSelector } = useRegionContext();
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Главная', href: '#' },
@@ -67,16 +71,30 @@ export function Header() {
               <ChevronDownIcon size={14} className="text-[#737373]" />
             </button>
 
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                alert('Авторизация временно недоступна. Функционал в разработке.');
-              }}
-            >
-              <UserIcon size={18} className="mr-2" />
-              Войти
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#404040] max-w-[150px] truncate">
+                  {user.fullName}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={logout}
+                  title="Выйти"
+                >
+                  <LogOutIcon size={18} />
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+              >
+                <UserIcon size={18} className="mr-2" />
+                Войти
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -109,21 +127,43 @@ export function Header() {
                 )}
               </button>
               <div className="flex items-center gap-4 px-4 py-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    alert('Авторизация временно недоступна. Функционал в разработке.');
-                  }}
-                >
-                  <UserIcon size={18} className="mr-2" />
-                  Войти
-                </Button>
+                {user ? (
+                  <>
+                    <span className="text-sm text-[#404040] flex-1 truncate">
+                      {user.fullName}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        logout();
+                      }}
+                    >
+                      <LogOutIcon size={18} className="mr-2" />
+                      Выйти
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setAuthModalOpen(true);
+                    }}
+                  >
+                    <UserIcon size={18} className="mr-2" />
+                    Войти
+                  </Button>
+                )}
               </div>
             </nav>
           </div>}
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </header>;
 }
