@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { MenuIcon, XIcon, UserIcon, MapPinIcon, ChevronDownIcon, LogOutIcon } from 'lucide-react';
+import { Menu, X, UserIcon, MapPinIcon, ChevronDownIcon, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useRegionContext } from '../../context/RegionContext';
 import { useAuth } from '../../context/AuthContext';
-import { AuthModal } from '../auth/AuthModal';
+import { Login } from '../auth/Login';
+import { Register } from '../auth/Register';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const { region, isLoading, openSelector } = useRegionContext();
   const { user, logout } = useAuth();
 
@@ -23,34 +25,26 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo and Title */}
-          <div className="flex items-center gap-4">
-            <img 
-              src="/logo-placeholder.png" 
-              alt="Логотип" 
-              className="w-12 h-12 rounded-xl object-cover"
-              onError={(e) => {
-                // Fallback если изображение не загрузилось
-                e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling;
-                if (fallback) fallback.classList.remove('hidden');
-              }}
-            />
-            <div className="hidden w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
-              <span className="text-white text-xl font-bold">П</span>
-            </div>
+          <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-xl font-bold text-[#262626]">
+              <h1 className="text-2xl font-bold text-[#262626] leading-tight">
                 Портал Поддержки
               </h1>
-              <p className="text-xs text-[#737373] font-mono">Помощь и права</p>
+              <p className="text-xs text-[#737373]">Военнослужащим и их семьям</p>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-2">
-            {navigation.map(item => <a key={item.name} href={item.href} className="px-4 py-2 text-sm text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-colors">
+          <nav className="hidden lg:flex items-center gap-1">
+            {navigation.map(item => (
+              <a 
+                key={item.name} 
+                href={item.href} 
+                className="px-5 py-2.5 text-sm font-medium text-[#404040] hover:text-[#2c5f8d] hover:bg-[#f0f4f8] rounded-lg transition-all duration-200 border border-transparent hover:border-[#2c5f8d]/20"
+              >
                 {item.name}
-              </a>)}
+              </a>
+            ))}
           </nav>
 
           {/* Right Actions */}
@@ -72,25 +66,25 @@ export function Header() {
             </button>
 
             {user ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[#404040] max-w-[150px] truncate">
-                  {user.fullName}
-                </span>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => window.location.hash = user.isAdmin ? '#admin' : '#profile'}
+                >
+                  <UserIcon size={18} className="mr-2" />
+                  {user.fullName || user.phone || 'Профиль'}
+                </Button>
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={logout}
-                  title="Выйти"
                 >
-                  <LogOutIcon size={18} />
+                  <LogOut size={18} />
                 </Button>
               </div>
             ) : (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setAuthModalOpen(true)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowLogin(true)}>
                 <UserIcon size={18} className="mr-2" />
                 Войти
               </Button>
@@ -99,7 +93,7 @@ export function Header() {
 
           {/* Mobile Menu Button */}
           <button className="lg:hidden p-2 text-[#404040] hover:bg-[#f5f5f5] rounded-lg" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <XIcon size={24} /> : <MenuIcon size={24} />}
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
@@ -129,9 +123,18 @@ export function Header() {
               <div className="flex items-center gap-4 px-4 py-3">
                 {user ? (
                   <>
-                    <span className="text-sm text-[#404040] flex-1 truncate">
-                      {user.fullName}
-                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        window.location.hash = user.isAdmin ? '#admin' : '#profile';
+                      }}
+                    >
+                      <UserIcon size={18} className="mr-2" />
+                      {user.fullName || user.phone || 'Профиль'}
+                    </Button>
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -140,8 +143,7 @@ export function Header() {
                         logout();
                       }}
                     >
-                      <LogOutIcon size={18} className="mr-2" />
-                      Выйти
+                      <LogOut size={18} />
                     </Button>
                   </>
                 ) : (
@@ -151,7 +153,7 @@ export function Header() {
                     className="flex-1"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      setAuthModalOpen(true);
+                      setShowLogin(true);
                     }}
                   >
                     <UserIcon size={18} className="mr-2" />
@@ -163,7 +165,24 @@ export function Header() {
           </div>}
       </div>
 
-      {/* Auth Modal */}
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      {showLogin && (
+        <Login 
+          onClose={() => setShowLogin(false)} 
+          onSwitchToRegister={() => {
+            setShowLogin(false);
+            setShowRegister(true);
+          }}
+        />
+      )}
+
+      {showRegister && (
+        <Register 
+          onClose={() => setShowRegister(false)} 
+          onSwitchToLogin={() => {
+            setShowRegister(false);
+            setShowLogin(true);
+          }}
+        />
+      )}
     </header>;
 }

@@ -1,133 +1,126 @@
-// Инициализация базы данных
-const { Pool } = require('pg');
+import pg from 'pg';
 
-// Создаем пул подключений
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // максимум подключений в пуле
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+const { Pool } = pg;
+
+export const pool = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'voensovet_db',
+  user: process.env.DB_USER || 'voensovet_user',
+  password: process.env.DB_PASSWORD || 'voensovet_password',
 });
 
-// SQL для создания таблиц
-const createTablesSQL = `
--- Пользователи
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  full_name VARCHAR(255),
-  phone VARCHAR(50),
-  password_hash VARCHAR(255),
-  role VARCHAR(50) DEFAULT 'user',
-  yandex_id VARCHAR(255) UNIQUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Запросы пользователей
-CREATE TABLE IF NOT EXISTS requests (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(500) NOT NULL,
-  description TEXT,
-  category VARCHAR(100),
-  status VARCHAR(50) DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- AI запросы
-CREATE TABLE IF NOT EXISTS ai_requests (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  primary_prompt TEXT NOT NULL,
-  secondary_response TEXT,
-  network_used VARCHAR(100),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Индексы для производительности
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_yandex_id ON users(yandex_id);
-CREATE INDEX IF NOT EXISTS idx_requests_user_id ON requests(user_id);
-CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);
-CREATE INDEX IF NOT EXISTS idx_ai_requests_user_id ON ai_requests(user_id);
-CREATE INDEX IF NOT EXISTS idx_ai_requests_created_at ON ai_requests(created_at);
-`;
-
-// Функция инициализации БД
-async function initializeDatabase() {
+export async function initDatabase() {
   try {
-    console.log('🔄 Connecting to database...');
-    
-    // Проверка подключения
-    const testConnection = await pool.query('SELECT NOW()');
-    console.log('✅ Database connected:', testConnection.rows[0].now);
-    
-    // Создание таблиц
-    console.log('🔄 Creating tables...');
-    await pool.query(createTablesSQL);
-    console.log('✅ Tables created successfully');
-    
-    // Проверка созданных таблиц
-    const tablesResult = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name;
-    `);
-    
-    console.log('📊 Database tables:', tablesResult.rows.map(r => r.table_name).join(', '));
-    
-    return true;
+    // Проверяем подключение
+    await pool.query('SELECT NOW()');
+    console.log('✅ Database connected');
+
+    // Создаем таблицы если их нет
+    await createTables();
+    console.log('✅ Database tables initialized');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail
-    });
-    return false;
-  }
-}
-
-// Функция для выполнения запросов
-async function query(text, params) {
-  const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('Query executed:', { text, duration, rows: res.rowCount });
-    return res;
-  } catch (error) {
-    console.error('Query error:', { text, error: error.message });
     throw error;
   }
 }
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  pool.end(() => {
-    console.log('🔌 Database pool closed');
-    process.exit(0);
-  });
-});
+async function createTables() {
+  // Таблица пользователей
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      phone VARCHAR(50) UNIQUE,
+      email VARCHAR(255) UNIQUE,
+      password_hash VARCHAR(255),
+      full_name VARCHAR(255),
+      is_admin BOOLEAN DEFAULT FALSE,
+      yandex_id VARCHAR(255) UNIQUE,
+      provider VARCHAR(50) DEFAULT 'local',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Обновляем существующую таблицу если поле phone меньше
+  await pool.query(`
+    DO $$ 
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns 
+                 WHERE table_name = 'users' AND column_name = 'phone' 
+                 AND character_maximum_length < 50) THEN
+        ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(50);
+      END IF;
+    END $$;
+  `);
 
-process.on('SIGTERM', () => {
-  pool.end(() => {
-    console.log('🔌 Database pool closed');
-    process.exit(0);
-  });
-});
+  // Таблица сессий
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(500) UNIQUE NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-module.exports = {
-  pool,
-  query,
-  initializeDatabase
-};
+  // Таблица истории запросов пользователя (куда ходил)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      page_url VARCHAR(500),
+      page_title VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица AI запросов
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      primary_prompt TEXT,
+      primary_response TEXT,
+      secondary_prompt TEXT,
+      secondary_response TEXT,
+      network_used VARCHAR(255),
+      tokens_used INTEGER,
+      execution_time_ms INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Таблица настроек админа (промпты)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      id SERIAL PRIMARY KEY,
+      key VARCHAR(100) UNIQUE NOT NULL,
+      value TEXT,
+      updated_by INTEGER REFERENCES users(id),
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Создаем индексы для производительности
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_user_requests_user_id ON user_requests(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_requests_created_at ON user_requests(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_requests_user_id ON ai_requests(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_requests_created_at ON ai_requests(created_at);
+  `);
+
+  // Вставляем дефолтные настройки админа если их нет
+  await pool.query(`
+    INSERT INTO admin_settings (key, value)
+    VALUES 
+      ('primary_prompt', 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы. Ответ должен быть кратким и структурированным.'),
+      ('secondary_prompt', 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ, учитывая контекст и специфику вопроса.')
+    ON CONFLICT (key) DO NOTHING
+  `);
+}
 
