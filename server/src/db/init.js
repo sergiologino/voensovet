@@ -42,14 +42,51 @@ async function createTables() {
     )
   `);
   
-  // Обновляем существующую таблицу если поле phone меньше
+  // МИГРАЦИЯ: Добавляем недостающие колонки в существующую таблицу
   await pool.query(`
     DO $$ 
     BEGIN
+      -- Добавляем provider если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'users' AND column_name = 'provider') THEN
+        ALTER TABLE users ADD COLUMN provider VARCHAR(50) DEFAULT 'local';
+        RAISE NOTICE 'Column provider added to users table';
+      END IF;
+      
+      -- Добавляем yandex_id если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'users' AND column_name = 'yandex_id') THEN
+        ALTER TABLE users ADD COLUMN yandex_id VARCHAR(255) UNIQUE;
+        RAISE NOTICE 'Column yandex_id added to users table';
+      END IF;
+      
+      -- Добавляем full_name если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'users' AND column_name = 'full_name') THEN
+        ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
+        RAISE NOTICE 'Column full_name added to users table';
+      END IF;
+      
+      -- Добавляем is_admin если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'users' AND column_name = 'is_admin') THEN
+        ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+        RAISE NOTICE 'Column is_admin added to users table';
+      END IF;
+      
+      -- Добавляем updated_at если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'users' AND column_name = 'updated_at') THEN
+        ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        RAISE NOTICE 'Column updated_at added to users table';
+      END IF;
+      
+      -- Расширяем phone до 50 символов если меньше
       IF EXISTS (SELECT 1 FROM information_schema.columns 
                  WHERE table_name = 'users' AND column_name = 'phone' 
                  AND character_maximum_length < 50) THEN
         ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(50);
+        RAISE NOTICE 'Column phone extended to VARCHAR(50)';
       END IF;
     END $$;
   `);
