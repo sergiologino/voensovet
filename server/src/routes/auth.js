@@ -45,14 +45,20 @@ function cleanPhone(phone) {
 
 // Регистрация
 router.post('/register', authLimiter, async (req, res, next) => {
+  console.log('📝 Registration request received:', { 
+    body: { ...req.body, password: '***', captcha: '***' } 
+  });
+  
   try {
     const { phone, password, fullName, captcha } = req.body;
 
     if (!phone || !password) {
+      console.log('❌ Validation failed: missing phone or password');
       return res.status(400).json({ error: 'Контакт (телефон или email) и пароль обязательны' });
     }
 
     if (!validateSimpleCaptcha(captcha)) {
+      console.log('❌ Captcha validation failed');
       return res.status(400).json({ error: 'Проверка капчи не пройдена' });
     }
 
@@ -63,25 +69,33 @@ router.post('/register', authLimiter, async (req, res, next) => {
 
     if (isEmailContact) {
       emailValue = phone.toLowerCase().trim();
+      console.log('📧 Email registration:', emailValue);
+      
       // Проверяем существует ли пользователь с таким email
       const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [emailValue]);
       if (existingUser.rows.length > 0) {
+        console.log('❌ User with this email already exists');
         return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
       }
     } else {
       // Очищаем телефон от форматирования
       phoneValue = cleanPhone(phone);
+      console.log('📱 Phone registration:', phoneValue);
+      
       // Проверяем существует ли пользователь с таким телефоном
       const existingUser = await pool.query('SELECT id FROM users WHERE phone = $1', [phoneValue]);
       if (existingUser.rows.length > 0) {
+        console.log('❌ User with this phone already exists');
         return res.status(400).json({ error: 'Пользователь с таким телефоном уже существует' });
       }
     }
 
     // Хешируем пароль
+    console.log('🔐 Hashing password...');
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Создаем пользователя
+    console.log('💾 Creating user in database...');
     const result = await pool.query(
       `INSERT INTO users (phone, email, password_hash, full_name, provider)
        VALUES ($1, $2, $3, $4, 'local')
@@ -90,14 +104,18 @@ router.post('/register', authLimiter, async (req, res, next) => {
     );
 
     const user = result.rows[0];
+    console.log('✅ User created successfully:', { id: user.id, phone: user.phone, email: user.email });
 
     // Создаем сессию
+    console.log('🔑 Creating JWT token...');
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d'
     });
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 дней
+    
+    console.log('💾 Saving session to database...');
 
     await pool.query(
       'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
@@ -111,6 +129,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 дней
     });
 
+    console.log('✅ Registration completed successfully');
     res.json({
       user: {
         id: user.id,
@@ -122,6 +141,13 @@ router.post('/register', authLimiter, async (req, res, next) => {
       token
     });
   } catch (error) {
+    console.error('❌ Registration error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack
+    });
     next(error);
   }
 });

@@ -26,6 +26,8 @@ export async function initDatabase() {
 }
 
 async function createTables() {
+  console.log('📋 Creating tables...');
+  
   // Таблица пользователей
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -41,8 +43,10 @@ async function createTables() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  console.log('✅ Users table created/checked');
   
   // МИГРАЦИЯ: Добавляем недостающие колонки в существующую таблицу
+  console.log('🔄 Running migrations for users table...');
   await pool.query(`
     DO $$ 
     BEGIN
@@ -114,8 +118,10 @@ async function createTables() {
       END IF;
     END $$;
   `);
+  console.log('✅ Users table migrations completed');
   
-  -- Добавляем CHECK ограничение: хотя бы одно из полей phone или email должно быть заполнено
+  // Добавляем CHECK ограничение: хотя бы одно из полей phone или email должно быть заполнено
+  console.log('🔄 Adding CHECK constraint...');
   await pool.query(`
     DO $$ 
     BEGIN
@@ -135,8 +141,10 @@ async function createTables() {
         RAISE NOTICE 'CHECK constraint already exists';
     END $$;
   `);
+  console.log('✅ CHECK constraint added');
 
   // Таблица сессий
+  console.log('📋 Creating user_sessions table...');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_sessions (
       id SERIAL PRIMARY KEY,
@@ -146,8 +154,10 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  console.log('✅ user_sessions table created');
 
   // Таблица истории запросов пользователя (куда ходил)
+  console.log('📋 Creating user_requests table...');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_requests (
       id SERIAL PRIMARY KEY,
@@ -157,8 +167,10 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  console.log('✅ user_requests table created');
 
   // Таблица AI запросов
+  console.log('📋 Creating ai_requests table...');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ai_requests (
       id SERIAL PRIMARY KEY,
@@ -173,8 +185,10 @@ async function createTables() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  console.log('✅ ai_requests table created');
 
   // Таблица настроек админа (промпты)
+  console.log('📋 Creating admin_settings table...');
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admin_settings (
       id SERIAL PRIMARY KEY,
@@ -184,8 +198,10 @@ async function createTables() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  console.log('✅ admin_settings table created');
 
   // Создаем индексы для производительности
+  console.log('📋 Creating indexes...');
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);
@@ -195,8 +211,10 @@ async function createTables() {
     CREATE INDEX IF NOT EXISTS idx_ai_requests_user_id ON ai_requests(user_id);
     CREATE INDEX IF NOT EXISTS idx_ai_requests_created_at ON ai_requests(created_at);
   `);
+  console.log('✅ Indexes created');
 
   // Вставляем дефолтные настройки админа если их нет
+  console.log('📋 Inserting default admin settings...');
   await pool.query(`
     INSERT INTO admin_settings (key, value)
     VALUES 
@@ -204,5 +222,7 @@ async function createTables() {
       ('secondary_prompt', 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ, учитывая контекст и специфику вопроса.')
     ON CONFLICT (key) DO NOTHING
   `);
+  console.log('✅ Default admin settings inserted');
+  console.log('🎉 All tables and migrations completed successfully!');
 }
 
