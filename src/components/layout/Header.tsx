@@ -21,11 +21,23 @@ export function Header() {
     { name: 'Жалобы', href: '#complaints' },
     { name: 'Организации', href: '#organizations' },
   ];
+  // Проверяем, был ли пользователь на сайте раньше
+  const isReturningUser = localStorage.getItem('hasVisited') === 'true';
+  
+  const handleAuthClick = () => {
+    if (isReturningUser) {
+      setShowLogin(true);
+    } else {
+      localStorage.setItem('hasVisited', 'true');
+      setShowRegister(true);
+    }
+  };
+
   return <header className="bg-white border-b-2 border-[#e5e5e5] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3">
+        <div className="flex justify-between items-center h-20 gap-8">
+          {/* Logo and Title - сдвинут влево */}
+          <div className="flex items-center gap-3 flex-shrink-0 mr-8">
             <img 
               src="/logo-placeholder.png" 
               alt="Портал Поддержки" 
@@ -39,8 +51,8 @@ export function Header() {
             </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
+          {/* Desktop Navigation - больше отступы */}
+          <nav className="hidden lg:flex items-center gap-2 flex-1 justify-center">
             {navigation.map(item => (
               <a 
                 key={item.name} 
@@ -52,8 +64,8 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Right Actions */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Right Actions - больше отступы */}
+          <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
             {/* Region Selector */}
             <button
               onClick={openSelector}
@@ -89,7 +101,7 @@ export function Header() {
                 </Button>
               </div>
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => setShowLogin(true)}>
+              <Button variant="ghost" size="sm" onClick={handleAuthClick}>
                 <UserIcon size={18} className="mr-2" />
                 Войти
               </Button>
@@ -158,7 +170,7 @@ export function Header() {
                     className="flex-1"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      setShowLogin(true);
+                      handleAuthClick();
                     }}
                   >
                     <UserIcon size={18} className="mr-2" />

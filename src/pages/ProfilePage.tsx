@@ -6,14 +6,16 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
+import { useRegionContext } from '../context/RegionContext';
 import { api } from '../api/client';
 import { SEO } from '../components/seo/SEO';
 import { MarkdownRenderer } from '../components/ai/MarkdownRenderer';
 import arialFont from '../utils/fonts/arial-normal';
-import { UserIcon, History, Settings, Bot, Copy, Download, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { UserIcon, History, Settings, Bot, Copy, Download, Check, ChevronDown, ChevronRight, MapPin } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
+  const { region, openSelector } = useRegionContext();
   const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'ai-history'>('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -452,6 +454,28 @@ export function ProfilePage() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+7 (999) 123-45-67"
                 />
+                
+                {/* Region Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-[#404040] mb-2">
+                    Регион
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openSelector}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm border-2 border-[#d4d4d4] rounded-lg bg-white text-[#404040] hover:border-[#2c5f8d] hover:bg-[#f0f4f8] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin size={18} className="text-[#2c5f8d]" />
+                      <span>{region ? region.name : 'Выберите регион'}</span>
+                    </div>
+                    <ChevronDown size={16} className="text-[#737373]" />
+                  </button>
+                  <p className="text-xs text-[#737373] mt-1">
+                    Укажите ваш регион для получения актуальной информации
+                  </p>
+                </div>
+
                 <Button type="submit" disabled={loading}>
                   {loading ? 'Сохранение...' : 'Сохранить изменения'}
                 </Button>
