@@ -13,6 +13,8 @@ let AI_API_KEY = process.env.AI_SERVICE_API_KEY;
 
 // Получить или создать API ключ для клиентского приложения
 async function getOrCreateApiKey(userId) {
+  console.log('🔍 Checking AI_API_KEY:', AI_API_KEY ? '[SET]' : '[NOT SET]');
+  
   // Проверяем есть ли уже сохраненный ключ в настройках пользователя
   // В реальности можно хранить это в отдельной таблице client_applications
   // Пока используем простой подход - один ключ на приложение
@@ -21,6 +23,7 @@ async function getOrCreateApiKey(userId) {
     // Если ключа нет, нужно зарегистрировать клиентское приложение в AI сервисе
     // Для этого нужна авторизация в AI сервисе как пользователь
     // Пока используем переменную окружения
+    console.error('❌ AI Service API Key не настроен!');
     throw new Error('AI Service API Key не настроен. Обратитесь к администратору.');
   }
 
@@ -50,22 +53,31 @@ router.get('/networks', async (req, res, next) => {
 
 // Обработать запрос через две нейросети
 router.post('/process', async (req, res, next) => {
+  console.log('🤖 AI process request received');
+  console.log('User:', req.user ? `ID: ${req.user.id}` : 'NOT AUTHENTICATED');
+  console.log('Body:', { userQuery: req.body.userQuery?.substring(0, 50) + '...', regionName: req.body.regionName });
+  
   try {
     const { userQuery, regionName } = req.body;
 
     if (!userQuery || typeof userQuery !== 'string') {
+      console.log('❌ Validation failed: userQuery invalid');
       return res.status(400).json({ error: 'Запрос пользователя обязателен' });
     }
 
+    console.log('🔑 Getting API key...');
     const apiKey = await getOrCreateApiKey(req.user.id);
+    console.log('✅ API key obtained');
 
     // Получаем данные пользователя
+    console.log('👤 Fetching user data...');
     const userResult = await pool.query(
       'SELECT full_name, phone, email FROM users WHERE id = $1',
       [req.user.id]
     );
     const user = userResult.rows[0] || {};
     const userName = user.full_name || null;
+    console.log('✅ User data fetched:', { userName, phone: user.phone, email: user.email });
     
     // Определяем имя и отчество для обращения
     let nameForAddress = '';
@@ -80,6 +92,7 @@ router.post('/process', async (req, res, next) => {
     }
 
     // Получаем промпты из настроек админа
+    console.log('📋 Fetching admin settings...');
     const settingsResult = await pool.query(
       'SELECT key, value FROM admin_settings WHERE key IN ($1, $2)',
       ['primary_prompt', 'secondary_prompt']
@@ -92,6 +105,7 @@ router.post('/process', async (req, res, next) => {
 
     const primaryPrompt = settings.primary_prompt || 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы.';
     const secondaryPromptBase = settings.secondary_prompt || 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ.';
+    console.log('✅ Admin settings fetched');
 
     // Получаем доступные нейросети и сортируем по приоритету
     const networksResponse = await axios.get(`${AI_SERVICE_URL}/api/ai/networks/available`, {
@@ -99,6 +113,8 @@ router.post('/process', async (req, res, next) => {
     });
 
     const networks = networksResponse.data || [];
+    console.log('✅ Networks fetched:', networks.length, 'networks available');
+    
     // Сортируем по приоритету: меньший приоритет = выше в списке
     const sortedNetworks = networks.sort((a, b) => (a.priority || 999) - (b.priority || 999));
     
@@ -340,10 +356,17 @@ router.post('/process', async (req, res, next) => {
       executionTimeMs: (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
     });
   } catch (error) {
-    console.error('AI process error:', error.response?.data || error.message);
+    console.error('❌ AI process error:', error.message);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      stack: error.stack
+    });
+    
     res.status(error.response?.status || 500).json({
       error: 'Ошибка при обработке запроса',
-      details: error.response?.data || error.message
+      details: process.env.NODE_ENV === 'production' ? error.message : error.response?.data || error.message
     });
   }
 });
