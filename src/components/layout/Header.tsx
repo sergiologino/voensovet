@@ -26,6 +26,11 @@ export function Header() {
         <div className="flex justify-between items-center h-20">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
+            <img 
+              src="/logo-placeholder.png" 
+              alt="Портал Поддержки" 
+              className="h-12 w-12 object-contain"
+            />
             <div>
               <h1 className="text-2xl font-bold text-[#262626] leading-tight">
                 Портал Поддержки
