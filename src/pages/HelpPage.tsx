@@ -5,6 +5,7 @@ import { HelpCategory } from '../components/help/HelpCategory';
 import { OrganizationCard } from '../components/help/OrganizationCard';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { AiAssistant } from '../components/ai/AiAssistant';
 import { HeartIcon, StethoscopeIcon, UsersIcon, ScaleIcon, SearchIcon } from 'lucide-react';
 export function HelpPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -78,6 +79,13 @@ export function HelpPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {categories.map(category => <HelpCategory key={category.id} icon={category.icon} title={category.title} description={category.description} onClick={() => setSelectedCategory(category.id)} />)}
               </div>
+            </div>
+          </main>
+
+          <AiAssistant />
+
+          <main className="py-0">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             </> :
         // Organization List View (showing psychological help as example)
         <>
