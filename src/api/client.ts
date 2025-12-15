@@ -2,9 +2,23 @@
 // или полный URL если указан в переменных окружения
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
+// Отладка для проверки переменных окружения
+console.log('🔍 API Configuration:');
+console.log('  VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('  API_BASE_URL:', API_BASE_URL);
+console.log('  Mode:', import.meta.env.MODE);
+
 // Проверка и предупреждение если используется HTTPS для localhost
 if (API_BASE_URL.startsWith('https://localhost') || API_BASE_URL.startsWith('https://127.0.0.1')) {
   console.warn('⚠️ ВНИМАНИЕ: Используется HTTPS для localhost. Для локальной разработки используйте HTTP: http://localhost:3001');
+}
+
+// Предупреждение если используется прямой URL с портом (должно быть через прокси)
+if (API_BASE_URL.includes(':3002')) {
+  console.error('❌ ОШИБКА: API_BASE_URL содержит :3002!');
+  console.error('   Это значит, что переменная VITE_API_URL установлена в Timeweb.');
+  console.error('   РЕШЕНИЕ: Удалите переменные VITE_API_URL и VITE_API_BASE_URL в настройках Timeweb.');
+  console.error('   API должен работать через Nginx прокси: /api/* → http://api:3002');
 }
 
 async function request<T>(
