@@ -56,7 +56,8 @@ export function Login({ onClose, onSwitchToRegister }: LoginProps) {
   };
 
   const handleYandexAuth = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/yandex`;
+    // Используем относительный URL для проксирования через Nginx
+    window.location.href = `/api/auth/yandex`;
   };
 
   return (

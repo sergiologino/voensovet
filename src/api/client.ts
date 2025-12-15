@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Используем пустую строку для относительных URL (проксирование через Nginx)
+// или полный URL если указан в переменных окружения
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Проверка и предупреждение если используется HTTPS для localhost
 if (API_BASE_URL.startsWith('https://localhost') || API_BASE_URL.startsWith('https://127.0.0.1')) {

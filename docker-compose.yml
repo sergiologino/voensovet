@@ -8,14 +8,16 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Переменные для сборки фронтенда
-        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3002}
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3002/api}
+        # API будет проксироваться через Nginx, поэтому используем пустую строку
+        - VITE_API_URL=${VITE_API_URL:-}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
     ports:
       - "8080:80"
     restart: unless-stopped
     environment:
       - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      - api
 
   # Backend (Node.js сервер) - запускается вторым
   api:
