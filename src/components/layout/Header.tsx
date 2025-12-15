@@ -20,7 +20,18 @@ export function Header() {
         <div className="flex justify-between items-center h-20">
           {/* Logo and Title */}
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
+            <img 
+              src="/logo-placeholder.png" 
+              alt="Логотип" 
+              className="w-12 h-12 rounded-xl object-cover"
+              onError={(e) => {
+                // Fallback если изображение не загрузилось
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling;
+                if (fallback) fallback.classList.remove('hidden');
+              }}
+            />
+            <div className="hidden w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
               <span className="text-white text-xl font-bold">П</span>
             </div>
             <div>
@@ -56,7 +67,13 @@ export function Header() {
               <ChevronDownIcon size={14} className="text-[#737373]" />
             </button>
 
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                alert('Авторизация временно недоступна. Функционал в разработке.');
+              }}
+            >
               <UserIcon size={18} className="mr-2" />
               Войти
             </Button>
@@ -92,7 +109,15 @@ export function Header() {
                 )}
               </button>
               <div className="flex items-center gap-4 px-4 py-3">
-                <Button variant="ghost" size="sm" className="flex-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    alert('Авторизация временно недоступна. Функционал в разработке.');
+                  }}
+                >
                   <UserIcon size={18} className="mr-2" />
                   Войти
                 </Button>

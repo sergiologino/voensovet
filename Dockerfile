@@ -20,6 +20,7 @@ COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
+COPY public ./public
 COPY src ./src
 
 # ARG для переменных окружения во время сборки (опционально)
