@@ -2,7 +2,22 @@
 version: '3.8'
 
 services:
-  # Backend (Node.js сервер) - запускается первым
+  # Frontend (React приложение) - ПЕРВЫМ для маршрутизации Timeweb
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Переменные для сборки фронтенда
+        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3002}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3002/api}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+
+  # Backend (Node.js сервер) - запускается вторым
   api:
     build:
       context: ./server
@@ -38,19 +53,4 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-
-  # Frontend (React приложение) - запускается вторым
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        # Переменные для сборки фронтенда
-        - VITE_API_URL=${VITE_API_URL:-https://voensovet.ru:3002}
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://voensovet.ru:3002/api}
-    ports:
-      - "8080:80"
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=${NODE_ENV:-production}
 
