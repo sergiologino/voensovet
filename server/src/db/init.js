@@ -192,6 +192,13 @@ async function createTables() {
   await pool.query(`
     DO $$ 
     BEGIN
+      -- Добавляем primary_prompt если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'primary_prompt') THEN
+        ALTER TABLE ai_requests ADD COLUMN primary_prompt TEXT;
+        RAISE NOTICE 'Column primary_prompt added to ai_requests table';
+      END IF;
+      
       -- Добавляем primary_response если не существует
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                      WHERE table_name = 'ai_requests' AND column_name = 'primary_response') THEN
@@ -204,6 +211,34 @@ async function createTables() {
                      WHERE table_name = 'ai_requests' AND column_name = 'secondary_prompt') THEN
         ALTER TABLE ai_requests ADD COLUMN secondary_prompt TEXT;
         RAISE NOTICE 'Column secondary_prompt added to ai_requests table';
+      END IF;
+      
+      -- Добавляем secondary_response если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'secondary_response') THEN
+        ALTER TABLE ai_requests ADD COLUMN secondary_response TEXT;
+        RAISE NOTICE 'Column secondary_response added to ai_requests table';
+      END IF;
+      
+      -- Добавляем network_used если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'network_used') THEN
+        ALTER TABLE ai_requests ADD COLUMN network_used VARCHAR(255);
+        RAISE NOTICE 'Column network_used added to ai_requests table';
+      END IF;
+      
+      -- Добавляем tokens_used если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'tokens_used') THEN
+        ALTER TABLE ai_requests ADD COLUMN tokens_used INTEGER;
+        RAISE NOTICE 'Column tokens_used added to ai_requests table';
+      END IF;
+      
+      -- Добавляем execution_time_ms если не существует
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                     WHERE table_name = 'ai_requests' AND column_name = 'execution_time_ms') THEN
+        ALTER TABLE ai_requests ADD COLUMN execution_time_ms INTEGER;
+        RAISE NOTICE 'Column execution_time_ms added to ai_requests table';
       END IF;
     END $$;
   `);
