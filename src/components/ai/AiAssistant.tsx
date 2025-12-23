@@ -70,21 +70,26 @@ export function AiAssistant() {
         <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-6 lg:p-8 shadow-lg">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-[#2c5f8d] rounded-xl flex items-center justify-center">
-              <Bot className="text-white" size={24} />
+              <Bot className="text-white" size={24}/>
             </div>
+            <img
+                src="/voenkot_bot.png"
+                alt="военкот"
+                className="h-18 w-18 object-contain"
+            />
             <div>
               <h2 className="text-2xl font-bold text-[#262626]">Нейропомощник Комбат</h2>
               <p className="text-sm text-[#737373]">Задайте вопрос и получите помощь</p>
             </div>
           </div>
 
-      {error && (
-        <Alert variant="error" className="mb-4">
-          {error}
-        </Alert>
-      )}
+          {error && (
+              <Alert variant="error" className="mb-4">
+                {error}
+              </Alert>
+          )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[#404040] mb-2">
             Ваш вопрос

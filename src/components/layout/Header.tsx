@@ -40,7 +40,7 @@ export function Header() {
           <div className="flex items-center gap-3 flex-shrink-0">
             <img 
               src="/logo-placeholder.png" 
-              alt="Портал Поддержки" 
+              alt="Военсовет"
               className="h-12 w-12 object-contain"
             />
             <div>
