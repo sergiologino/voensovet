@@ -45,7 +45,7 @@ export function Header() {
             />
             <div>
               <h1 className="text-2xl font-bold text-[#262626] leading-tight">
-                Портал Поддержки
+                ВОЕНСОВЕТ.РУ
               </h1>
               <p className="text-xs text-[#737373]">Военнослужащим и их семьям</p>
             </div>
