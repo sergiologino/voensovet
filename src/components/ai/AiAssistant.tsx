@@ -72,10 +72,10 @@ export function AiAssistant() {
             <img
                 src="/voenkot_bot.png"
                 alt="военкот"
-                className="h-12 w-12 object-contain"
+                className="h-16 w-16 object-contain"
             />
             <div>
-              <h2 className="text-2xl font-bold text-[#262626]">Нейропомощник Комбат</h2>
+              <h2 className="text-2xl font-bold text-[#262626]">Помощник Военкот бот</h2>
               <p className="text-sm text-[#737373]">Задайте вопрос и получите помощь</p>
             </div>
           </div>
