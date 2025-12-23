@@ -16,3 +16,4 @@ VITE_API_BASE_URL=https://your-api-base-url.com
 - В панели Timeweb переменные будут автоматически доступны во время сборки Docker образа
 - НЕ добавляйте файл `.env` в git репозиторий!
 
+

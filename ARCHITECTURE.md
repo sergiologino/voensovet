@@ -378,3 +378,4 @@ healthcheck:
 **Дата**: 14 декабря 2025  
 **Автор**: AI Assistant (Claude Sonnet 4.5)
 
+

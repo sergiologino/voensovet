@@ -44,7 +44,7 @@ export function Footer() {
               Техническая поддержка:
               <br />
               <a href="mailto:support@portal.ru" className="text-[#2c5f8d] hover:underline">
-                support@portal.ru
+                admin@voensovet.ru
               </a>
             </p>
           </div>
@@ -52,7 +52,7 @@ export function Footer() {
 
         <div className="mt-8 pt-8 border-t-2 border-[#e5e5e5]">
           <p className="text-xs text-[#a3a3a3] text-center font-mono">
-            © 2024 Портал Поддержки. Все обращения конфиденциальны.
+            © 2025 Портал Поддержки. Все обращения конфиденциальны.
           </p>
         </div>
       </div>

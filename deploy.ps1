@@ -76,3 +76,4 @@ if ($openBrowser -eq "y" -or $openBrowser -eq "Y") {
 Write-Host ""
 Write-Host "✅ Готово! Удачного деплоя! 🎉" -ForegroundColor Green
 
+

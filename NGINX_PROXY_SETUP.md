@@ -209,3 +209,4 @@ https://voensovet.ru/api/auth/yandex/callback
 
 **Результат**: Полностью рабочая авторизация через HTTPS! 🎉
 
+

@@ -92,3 +92,4 @@ YANDEX_REDIRECT_URI=https://voensovet.ru:3001/api/auth/yandex/callback
 
 **Время деплоя: ~3-5 минут** ⏱️
 
+
