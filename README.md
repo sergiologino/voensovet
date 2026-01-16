@@ -1,4 +1,4 @@
-# Magic Patterns - Vite Template
+# Voensovet.ru
 
 
 
