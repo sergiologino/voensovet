@@ -24,6 +24,15 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Post-auth redirect: used by Entry Landing / VoenKot button to return user to desired page.
+  useEffect(() => {
+    if (!user) return;
+    const postAuthHash = window.sessionStorage.getItem('vs_post_auth_hash');
+    if (!postAuthHash) return;
+    window.sessionStorage.removeItem('vs_post_auth_hash');
+    window.location.hash = `#${postAuthHash}`;
+  }, [user]);
+
   // Profile form
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');

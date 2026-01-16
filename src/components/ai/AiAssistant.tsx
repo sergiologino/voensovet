@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,26 @@ export function AiAssistant() {
   const [showDetailed, setShowDetailed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const shouldAutofocus = window.sessionStorage.getItem('vs_ai_autofocus') === '1';
+    const prefill = window.sessionStorage.getItem('vs_ai_prefill');
+    if (prefill && prefill.trim() && !query.trim()) {
+      setQuery(prefill.trim());
+      window.sessionStorage.removeItem('vs_ai_prefill');
+    }
+    if (shouldAutofocus) {
+      // Let the page render before scrolling
+      window.sessionStorage.removeItem('vs_ai_autofocus');
+      window.setTimeout(() => {
+        const section = document.getElementById('voenkot');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        textareaRef.current?.focus();
+      }, 50);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const exampleQueries = [
     'Какие льготы положены военнослужащим после увольнения?',
@@ -28,7 +48,14 @@ export function AiAssistant() {
     e.preventDefault();
     
     if (!user) {
-      setError('Для использования AI помощника необходимо войти в систему');
+      // Preserve query, then redirect user to login and return back.
+      if (query.trim()) {
+        window.sessionStorage.setItem('vs_ai_prefill', query.trim());
+      }
+      window.sessionStorage.setItem('vs_post_auth_hash', 'home');
+      window.sessionStorage.setItem('vs_ai_autofocus', '1');
+      window.location.hash = '#profile';
+      setError('Чтобы продолжить диалог с ВоенКотом, войдите в систему.');
       return;
     }
 
@@ -65,7 +92,7 @@ export function AiAssistant() {
   };
 
   return (
-    <section className="py-12 lg:py-16 bg-[#fafafa]">
+    <section id="voenkot" className="py-12 lg:py-16 bg-[#fafafa]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-6 lg:p-8 shadow-lg">
           <div className="flex items-center gap-3 mb-6">
@@ -98,10 +125,11 @@ export function AiAssistant() {
               setError(null);
             }}
             rows={4}
+            ref={textareaRef}
             className="w-full px-4 py-3 bg-white border-2 border-[#d4d4d4] rounded-xl text-[#262626] focus:outline-none focus:border-[#2c5f8d] focus:ring-2 focus:ring-[#2c5f8d] focus:ring-opacity-20 transition-colors"
             placeholder="Например: Какие льготы положены военнослужащим после увольнения?"
             required
-            disabled={loading || !user}
+            disabled={loading}
           />
         </div>
 
@@ -114,7 +142,7 @@ export function AiAssistant() {
                 key={index}
                 type="button"
                 onClick={() => handleExampleClick(example)}
-                disabled={loading || !user}
+                disabled={loading}
                 className="px-3 py-1.5 text-xs bg-[#f0f4f8] text-[#2c5f8d] rounded-lg hover:bg-[#d9e6f2] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {example}
@@ -125,7 +153,7 @@ export function AiAssistant() {
 
         <Button 
           type="submit" 
-          disabled={loading || !user} 
+          disabled={loading} 
           fullWidth
           className="flex items-center justify-center gap-2"
         >
@@ -144,7 +172,17 @@ export function AiAssistant() {
 
         {!user && (
           <p className="text-xs text-center text-[#737373]">
-            <a href="#profile" className="text-[#2c5f8d] hover:underline">
+            <a
+              href="#profile"
+              onClick={() => {
+                window.sessionStorage.setItem('vs_post_auth_hash', 'home');
+                window.sessionStorage.setItem('vs_ai_autofocus', '1');
+                if (query.trim()) {
+                  window.sessionStorage.setItem('vs_ai_prefill', query.trim());
+                }
+              }}
+              className="text-[#2c5f8d] hover:underline"
+            >
               Войдите в систему
             </a>
             {' '}для использования Нейропомощника

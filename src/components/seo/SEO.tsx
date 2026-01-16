@@ -14,12 +14,16 @@ export function SEO({
   title,
   description,
   keywords,
-  ogImage = 'https://sergiologino-voensovet-1e9f.twc1.net/logo-placeholder.png',
+  ogImage,
   ogType = 'website',
   canonical,
   noindex = false
 }: SEOProps) {
-  const siteUrl = 'https://sergiologino-voensovet-1e9f.twc1.net';
+  const siteUrl =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://voensovet.ru';
+  const resolvedOgImage = ogImage || `${siteUrl}/logo-placeholder.png`;
   const fullTitle = `${title} | Портал Поддержки Военнослужащих`;
   const fullDescription = description || 'Портал поддержки военнослужащих - помощь, права, льготы и консультации';
 
@@ -55,7 +59,7 @@ export function SEO({
     updateMetaTag('og:title', fullTitle, 'property');
     updateMetaTag('og:description', fullDescription, 'property');
     updateMetaTag('og:type', ogType, 'property');
-    updateMetaTag('og:image', ogImage, 'property');
+    updateMetaTag('og:image', resolvedOgImage, 'property');
     updateMetaTag('og:url', canonical || siteUrl, 'property');
     updateMetaTag('og:site_name', 'Портал Поддержки Военнослужащих', 'property');
     updateMetaTag('og:locale', 'ru_RU', 'property');
@@ -64,7 +68,7 @@ export function SEO({
     updateMetaTag('twitter:card', 'summary_large_image');
     updateMetaTag('twitter:title', fullTitle);
     updateMetaTag('twitter:description', fullDescription);
-    updateMetaTag('twitter:image', ogImage);
+    updateMetaTag('twitter:image', resolvedOgImage);
 
     // Canonical URL
     let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
@@ -79,7 +83,7 @@ export function SEO({
     updateMetaTag('author', 'Портал Поддержки Военнослужащих');
     updateMetaTag('theme-color', '#2c5f8d');
 
-  }, [fullTitle, fullDescription, keywords, ogImage, ogType, canonical, noindex, siteUrl]);
+  }, [fullTitle, fullDescription, keywords, resolvedOgImage, ogType, canonical, noindex, siteUrl]);
 
   return null;
 }
