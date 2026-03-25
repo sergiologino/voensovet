@@ -40,3 +40,4 @@ export function initIframeResizer() {
   // Отправляем периодически (fallback)
   setInterval(sendHeight, 1000);
 }
+

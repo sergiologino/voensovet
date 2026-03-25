@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { AiAssistant } from '../components/ai/AiAssistant';
 import {
   ScaleIcon,
   SearchIcon,
@@ -347,9 +348,15 @@ export function BenefitsPage() {
               </p>
             </div>
           )}
+        </div>
+      </main>
 
+      <AiAssistant />
+
+      <main className="py-12 lg:py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Bottom CTA */}
-          <div className="mt-12 bg-[#f0f4f8] rounded-2xl p-8 text-center">
+          <div className="bg-[#f0f4f8] rounded-2xl p-8 text-center">
             <h3 className="text-xl font-semibold text-[#262626] mb-4">
               Не нашли нужную информацию?
             </h3>
@@ -371,3 +378,4 @@ export function BenefitsPage() {
     </div>
   );
 }
+

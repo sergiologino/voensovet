@@ -5,6 +5,7 @@ import { HelpCategory } from '../components/help/HelpCategory';
 import { OrganizationCard } from '../components/help/OrganizationCard';
 import { Alert } from '../components/ui/Alert';
 import { Input } from '../components/ui/Input';
+import { AiAssistant } from '../components/ai/AiAssistant';
 import { HeartIcon, StethoscopeIcon, UsersIcon, ScaleIcon, SearchIcon } from 'lucide-react';
 export function HelpPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -142,6 +143,8 @@ export function HelpPage() {
             </>}
         </div>
       </main>
+
+      <AiAssistant />
 
       <Footer />
     </div>;

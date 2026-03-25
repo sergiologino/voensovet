@@ -2,18 +2,57 @@
 version: '3.8'
 
 services:
+  # Frontend (React приложение) - ПЕРВЫМ для маршрутизации Timeweb
   web:
     build:
-      context: src
+      context: .
       dockerfile: Dockerfile
+      args:
+        # API будет проксироваться через Nginx, поэтому используем пустую строку
+        - VITE_API_URL=${VITE_API_URL:-}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      - api
+
+  # Backend (Node.js сервер) - запускается вторым
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+    environment:
+      # Переменные пробрасываются из хоста (настройки Timeweb)
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3002
+      # Database
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      # Yandex OAuth
+      - YANDEX_CLIENT_ID=${YANDEX_CLIENT_ID}
+      - YANDEX_CLIENT_SECRET=${YANDEX_CLIENT_SECRET}
+      - YANDEX_REDIRECT_URI=${YANDEX_REDIRECT_URI}
+      # AI Service
+      - AI_SERVICE_URL=${AI_SERVICE_URL}
+      - AI_SERVICE_API_KEY=${AI_SERVICE_API_KEY}
+      # Other
+      - FRONTEND_URL=${FRONTEND_URL}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
