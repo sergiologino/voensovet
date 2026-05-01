@@ -1,5 +1,4 @@
 import React from 'react';
-import { SEO } from '../components/seo/SEO';
 
 function goToHomeAndOpenBot(prefill?: string) {
   window.localStorage.setItem('vs_entry_seen', '1');
@@ -13,12 +12,6 @@ function goToHomeAndOpenBot(prefill?: string) {
 export function EntryLandingPage() {
   return (
     <div className="min-h-screen text-[#262626] bg-[#f7f8fb] relative overflow-hidden">
-      <SEO
-        title="Voensovet — помощник и проводник"
-        description="Помогаем разобраться после службы и в сложных ситуациях. Для военных, участников СВО и их семей. Бесплатно."
-        canonical="https://voensovet.ru#welcome"
-      />
-
       {/* Soft "morning" background: calm, warm, strict */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 -left-24 h-[520px] w-[520px] rounded-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.18),transparent_65%)]" />

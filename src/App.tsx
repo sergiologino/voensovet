@@ -16,6 +16,7 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { RegionProvider } from './context/RegionContext';
 import { AuthProvider } from './context/AuthContext';
 import { PageTracker } from './components/PageTracker';
+import { AppRouteSEO } from './components/seo/AppRouteSEO';
 
 function getInitialPageFromHash() {
   const rawHash = window.location.hash || '';
@@ -109,7 +110,12 @@ function AppContent() {
     'auth-callback': <AuthCallbackPage />,
   };
 
-  return pages[currentPage] || <HomePage />;
+  return (
+    <>
+      <AppRouteSEO activePage={currentPage} />
+      {pages[currentPage] ?? <HomePage />}
+    </>
+  );
 }
 
 export function App() {

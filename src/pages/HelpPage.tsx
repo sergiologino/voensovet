@@ -65,10 +65,13 @@ export function HelpPage() {
                 <h1 className="text-4xl lg:text-5xl font-bold text-[#262626] mb-4">
                   Мне нужна помощь
                 </h1>
-                <p className="text-lg text-[#525252] leading-relaxed max-w-3xl">
+                <p className="text-lg text-[#525252] leading-relaxed max-w-3xl mb-8">
                   Выберите, в какой сфере вам нужна поддержка. Мы подберем для
                   вас подходящие организации и контакты.
                 </p>
+                <h2 className="text-2xl font-semibold text-[#262626] mb-6">
+                  Тип поддержки
+                </h2>
               </div>
 
               <Alert variant="info" className="mb-8">
@@ -90,10 +93,13 @@ export function HelpPage() {
                 <h1 className="text-4xl lg:text-5xl font-bold text-[#262626] mb-4">
                   Психологическая помощь
                 </h1>
-                <p className="text-lg text-[#525252] leading-relaxed max-w-3xl">
+                <p className="text-lg text-[#525252] leading-relaxed max-w-3xl mb-8">
                   Горячие линии, психологи и службы поддержки, которые помогут
                   вам прямо сейчас
                 </p>
+                <h2 className="text-2xl font-semibold text-[#262626] mb-4">
+                  Организации и контакты
+                </h2>
               </div>
 
               <Alert variant="success" title="Срочная помощь" className="mb-8">

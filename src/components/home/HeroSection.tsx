@@ -35,9 +35,9 @@ export function HeroSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Message */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl lg:text-5xl font-bold text-[#262626] mb-6 leading-tight">
+          <h1 className="text-4xl lg:text-5xl font-bold text-[#262626] mb-6 leading-tight">
             Здесь вам помогут и подскажут
-          </h2>
+          </h1>
           <p className="text-lg lg:text-xl text-[#525252] max-w-3xl mx-auto leading-relaxed">
             Это место, где вы можете получить поддержку, узнать о своих правах и
             найти нужные контакты. Все обращения конфиденциальны.
@@ -47,9 +47,9 @@ export function HeroSection() {
         {/* User Type Selection */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {userTypes.map(type => <a key={type.title} href={type.href} className="bg-white/95 backdrop-blur-sm border-2 border-[#d4d4d4] rounded-2xl p-8 hover:border-[#2c5f8d] hover:shadow-lg transition-all group">
-              <h3 className="text-lg font-semibold text-[#262626] mb-3 group-hover:text-[#2c5f8d]">
+              <h2 className="text-lg font-semibold text-[#262626] mb-3 group-hover:text-[#2c5f8d]">
                 {type.title}
-              </h3>
+              </h2>
               <p className="text-sm text-[#737373] leading-relaxed">
                 {type.description}
               </p>
@@ -59,9 +59,9 @@ export function HeroSection() {
         {/* Urgent Help CTA */}
         <div className="bg-[#5a7f5a] rounded-2xl p-8 lg:p-12 text-center shadow-lg">
           <PhoneIcon className="mx-auto mb-4 text-white" size={48} />
-          <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
+          <h2 className="text-2xl lg:text-3xl font-bold text-white mb-4">
             Нужна срочная помощь?
-          </h3>
+          </h2>
           <p className="text-lg text-white/90 mb-6 max-w-2xl mx-auto">
             Если вам нужна немедленная поддержка, мы поможем найти специалистов
             и организации, которые работают прямо сейчас

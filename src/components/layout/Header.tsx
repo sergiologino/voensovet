@@ -44,9 +44,9 @@ export function Header() {
               className="h-12 w-12 object-contain"
             />
             <div>
-              <h1 className="text-2xl font-bold text-[#262626] leading-tight">
+              <p className="text-2xl font-bold text-[#262626] leading-tight">
                 ВОЕНСОВЕТ.РУ
-              </h1>
+              </p>
               <p className="text-xs text-[#737373]">Военнослужащим и их семьям</p>
             </div>
           </div>

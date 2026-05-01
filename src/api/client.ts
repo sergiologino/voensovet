@@ -140,7 +140,9 @@ export const api = {
 
   // Alias for getUserAiRequests (used in ProfilePage)
   async getAiHistory(limit = 100, offset = 0) {
-    return request<{ requests: any[] }>(`/api/ai/history?limit=${limit}&offset=${offset}`);
+    return request<{ requests: any[]; total?: number }>(
+      `/api/ai/history?limit=${limit}&offset=${offset}`
+    );
   },
 
   // AI
@@ -161,12 +163,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ userQuery, regionName }),
     });
-  },
-
-  async getAiHistory(limit = 20, offset = 0) {
-    return request<{ requests: any[]; total: number }>(
-      `/api/ai/history?limit=${limit}&offset=${offset}`
-    );
   },
 };
 

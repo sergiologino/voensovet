@@ -1,0 +1,22 @@
+# https://voensovet.ru — SPA с hash-маршрутизацией; sitemap отражает основные разделы.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+Sitemap: https://voensovet.ru/sitemap.xml

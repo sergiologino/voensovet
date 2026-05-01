@@ -12,7 +12,6 @@ import { Alert } from '../components/ui/Alert';
 import { useAuth } from '../context/AuthContext';
 import { useRegionContext } from '../context/RegionContext';
 import { api } from '../api/client';
-import { SEO } from '../components/seo/SEO';
 import { MarkdownRenderer } from '../components/ai/MarkdownRenderer';
 import arialFont from '../utils/fonts/arial-normal';
 import { UserIcon, History, Settings, Bot, Copy, Download, Check, ChevronDown, ChevronRight, MapPin } from 'lucide-react';
@@ -388,12 +387,6 @@ export function ProfilePage() {
 
   return (
     <>
-      <SEO
-        title="Личный кабинет"
-        description="Личный кабинет пользователя портала поддержки военнослужащих: профиль, история запросов, настройки."
-        canonical="https://voensovet.ru#profile"
-        noindex={true}
-      />
       <div className="min-h-screen bg-white">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
