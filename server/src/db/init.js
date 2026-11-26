@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { INITIAL_MEASURES } from '../data/initialMeasures.js';
 import { normalizeMeasure } from '../measures.js';
+import { alignSerialSequences } from './alignSerialSequences.js';
 
 const { Pool } = pg;
 
@@ -274,6 +275,8 @@ async function createTables() {
   `);
   console.log('✅ admin_settings table created');
 
+  await alignSerialSequences(pool, ['users', 'user_sessions', 'user_requests', 'ai_requests', 'admin_settings']);
+
   // Создаем индексы для производительности
   console.log('📋 Creating indexes...');
   await pool.query(`
@@ -338,6 +341,7 @@ async function createTables() {
   await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS date_end DATE');
   await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS source_key TEXT');
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_benefit_measures_source_key ON benefit_measures (source_key)');
+  await alignSerialSequences(pool, ['benefit_measures']);
   await pool.query(`CREATE TABLE IF NOT EXISTS navigator_profiles (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     audience VARCHAR(30) NOT NULL,

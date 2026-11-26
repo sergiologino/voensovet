@@ -12,6 +12,12 @@ router.use(authenticateToken);
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'https://sergiologino-zettelkastenapp-ai-integration-bce3.twc1.net';
 const AI_API_KEY = process.env.AI_SERVICE_API_KEY;
+const AI_UNAVAILABLE_MESSAGE = 'Сервис ответов временно недоступен. Попробуйте позже или воспользуйтесь проводником.';
+const AI_NETWORK_ERRORS = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNABORTED']);
+
+function isAiNetworkError(error) {
+  return AI_NETWORK_ERRORS.has(error.code) || AI_NETWORK_ERRORS.has(error.cause?.code);
+}
 
 // Получить или создать API ключ для клиентского приложения
 async function getOrCreateApiKey() {
@@ -43,8 +49,8 @@ router.get('/networks', async (req, res, next) => {
 
     res.json({ networks: response.data });
   } catch (error) {
-    console.error('AI networks failed', { status: error.response?.status || 500 });
-    res.status(502).json({ error: 'Ошибка при получении списка нейросетей' });
+    console.error('AI networks failed', { upstreamStatus: error.response?.status, code: error.code || error.cause?.code });
+    res.status(isAiNetworkError(error) ? 503 : 502).json({ error: isAiNetworkError(error) ? AI_UNAVAILABLE_MESSAGE : 'Ошибка при получении списка нейросетей' });
   }
 });
 
@@ -318,8 +324,8 @@ router.post('/process', async (req, res, next) => {
       executionTimeMs: (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
     });
   } catch (error) {
-    console.error('AI process failed', { status: error.response?.status || 500 });
-    res.status(502).json({ error: 'Ошибка при обработке запроса' });
+    console.error('AI process failed', { upstreamStatus: error.response?.status, code: error.code || error.cause?.code });
+    res.status(isAiNetworkError(error) ? 503 : 502).json({ error: isAiNetworkError(error) ? AI_UNAVAILABLE_MESSAGE : 'Ошибка при обработке запроса' });
   }
 });
 

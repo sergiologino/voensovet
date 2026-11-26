@@ -50,4 +50,21 @@ describe('AI request privacy', () => {
     expect(outbound).toContain('Владимирская область');
     expect(mocks.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO ai_requests'))?.[1]).toContain(original);
   });
+
+  it('reports an unavailable AI service when its hostname cannot be resolved', async () => {
+    mocks.get.mockRejectedValueOnce(Object.assign(new Error('DNS unavailable'), { code: 'ENOTFOUND' }));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await fetch(`${baseUrl}/api/ai/process`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userQuery: 'Как получить поддержку?' }),
+      });
+      expect(response.status).toBe(503);
+      expect((await response.json()).error).toContain('Сервис ответов временно недоступен');
+      expect(log).toHaveBeenCalledWith('AI process failed', { upstreamStatus: undefined, code: 'ENOTFOUND' });
+      expect(mocks.post).toHaveBeenCalledTimes(2);
+    } finally {
+      log.mockRestore();
+    }
+  });
 });
