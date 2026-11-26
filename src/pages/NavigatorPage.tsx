@@ -4,7 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { useRegionContext } from '../context/RegionContext';
 import { useAuth } from '../context/AuthContext';
-import { api, BenefitMeasure, NavigatorMatch, NavigatorProfile } from '../api/client';
+import { api, BenefitMeasure, NavigatorMatch, NavigatorProfile, NavigatorRoute } from '../api/client';
 import { getCatalogCards, getNavigatorCards, inferNavigatorTopic, NavigatorAudience, NavigatorTopic, NAVIGATOR_AUDIENCES, PILOT_REGIONS } from '../data/navigator';
 
 const topics = [
@@ -32,6 +32,23 @@ export function NavigatorPage() {
   const [profileMessage, setProfileMessage] = useState('');
   const [matches, setMatches] = useState<NavigatorMatch[] | null>(null);
   const [matchesLoading, setMatchesLoading] = useState(false);
+  const [routes, setRoutes] = useState<NavigatorRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [progressBusy, setProgressBusy] = useState(false);
+  const loadRoutes = async () => {
+    const result = await api.getNavigatorRoutes();
+    setRoutes(result.routes);
+  };
+  useEffect(() => {
+    if (!user) { setRoutes([]); return; }
+    let active = true;
+    setRoutesLoading(true);
+    api.getNavigatorRoutes().then(({ routes: saved }) => { if (active) setRoutes(saved); })
+      .catch(() => { if (active) setProgressMessage('Не удалось загрузить сохранённые маршруты.'); })
+      .finally(() => { if (active) setRoutesLoading(false); });
+    return () => { active = false; };
+  }, [user?.id, region?.id]);
   useEffect(() => {
     if (!user) { setProfileSaved(false); setMatches(null); return; }
     let active = true;
@@ -68,6 +85,7 @@ export function NavigatorPage() {
   }, [region?.id, locality]);
   const cards = user && profileSaved ? matches ? getCatalogCards(matches.map((item) => item.measure), topic, audience) : [] : catalog ? getCatalogCards(catalog, topic, audience) : getNavigatorCards(topic, region?.id ?? null, audience).filter((card) => !card.source);
   const matchById = new Map(profileSaved ? matches?.map((item) => [String(item.measure.id), item]) || [] : []);
+  const routeById = new Map(routes.map((route) => [String(route.measure_id), route]));
   const isPilotRegion = region && PILOT_REGIONS.some((id) => id === region.id);
 
   const submitQuery = (event: React.FormEvent) => {
@@ -89,8 +107,40 @@ export function NavigatorPage() {
       setProfile(saved);
       setAudience(saved.audience);
       setProfileSaved(true);
+      void loadRoutes().catch(() => setProgressMessage('Не удалось обновить сохранённые маршруты.'));
       setProfileMessage('Анкета сохранена. Подбор обновлён.');
     } catch (error) { setProfileMessage(error instanceof Error ? error.message : 'Не удалось сохранить анкету'); }
+  };
+
+  const saveRoute = async (id: number) => {
+    setProgressBusy(true); setProgressMessage('');
+    try {
+      await api.saveNavigatorRoute(id, locality);
+      await loadRoutes();
+      setProgressMessage('Маршрут сохранён. Он будет доступен после следующего входа.');
+    } catch (error) { setProgressMessage(error instanceof Error ? error.message : 'Не удалось сохранить маршрут'); }
+    finally { setProgressBusy(false); }
+  };
+
+  const toggleStep = async (id: number, index: number, completed: boolean) => {
+    setProgressBusy(true); setProgressMessage('');
+    try {
+      await api.setNavigatorStep(id, index, completed);
+      await loadRoutes();
+      setProgressMessage('Прогресс сохранён.');
+    } catch (error) { setProgressMessage(error instanceof Error ? error.message : 'Не удалось сохранить отметку'); }
+    finally { setProgressBusy(false); }
+  };
+
+  const removeRoute = async (id: number) => {
+    if (!window.confirm('Удалить маршрут вместе со всеми отметками шагов?')) return;
+    setProgressBusy(true); setProgressMessage('');
+    try {
+      await api.removeNavigatorRoute(id);
+      await loadRoutes();
+      setProgressMessage('Маршрут удалён.');
+    } catch (error) { setProgressMessage(error instanceof Error ? error.message : 'Не удалось удалить маршрут'); }
+    finally { setProgressBusy(false); }
   };
 
   return (
@@ -136,6 +186,20 @@ export function NavigatorPage() {
           </form>
         </section> : <p className="mt-6 rounded-xl bg-white p-4 text-sm text-[#525252]">Для персонального подбора войдите в учётную запись и заполните короткую анкету. Общие карточки доступны ниже.</p>}
 
+        {user && <section className="mt-8 rounded-2xl border border-[#d9e6f2] bg-white p-5 shadow-sm sm:p-7" aria-labelledby="navigator-saved-title">
+          <h2 id="navigator-saved-title" className="text-xl font-bold">Мои сохранённые маршруты</h2>
+          <p className="mt-2 text-sm text-[#525252]">Отмечайте выполненные действия и продолжайте с любого устройства после входа в аккаунт. Отметка означает только ваш прогресс, а не подтверждение права на меру.</p>
+          {progressMessage && <p role="status" className="mt-3 rounded-xl bg-[#f0f4f8] p-3 text-sm text-[#163859]">{progressMessage}</p>}
+          {routesLoading ? <p className="mt-4 text-sm">Загружаем маршруты…</p> : routes.length === 0 ? <p className="mt-4 text-sm text-[#525252]">Пока нет сохранённых маршрутов. Выберите меру ниже и нажмите «Сохранить маршрут».</p> : <div className="mt-4 grid gap-3 sm:grid-cols-2">{routes.map((route) => <div key={route.measure_id} className="rounded-xl border border-[#d4d4d4] p-4">
+            <p className="font-semibold">{route.measure.title}</p>
+            <p className="mt-2 text-sm text-[#525252]">Выполнено шагов: {route.completed_step_indices.length} из {route.measure.steps.length}</p>
+            <p className="mt-1 text-xs text-[#737373]">Последнее изменение: {new Date(route.updated_at).toLocaleDateString('ru-RU')}</p>
+            {route.measure.steps.length > 0 && route.completed_step_indices.length === route.measure.steps.length && <p className="mt-2 text-sm font-semibold text-[#1e4976]">Все шаги отмечены. Это не означает назначения меры.</p>}
+            {!route.available && <p className="mt-2 rounded-lg bg-[#fffbeb] p-2 text-sm text-[#5c470f]">Маршрут сейчас недоступен: мера или условия изменились. Проверьте актуальные карточки.</p>}
+            <div className="mt-3 flex flex-wrap gap-4 text-sm"><button type="button" onClick={() => { setTopic(route.measure.topic); document.getElementById('navigator-path-title')?.scrollIntoView({ behavior: 'smooth' }); }} className="font-semibold text-[#2c5f8d] underline">{route.available ? 'Продолжить' : 'Открыть направление'}</button><button type="button" disabled={progressBusy} onClick={() => void removeRoute(route.measure_id)} className="text-[#8b3030] underline disabled:opacity-50">Удалить маршрут</button></div>
+          </div>)}</div>}
+        </section>}
+
         <section className="mt-9 rounded-3xl bg-white p-5 shadow-sm sm:p-8" aria-labelledby="navigator-query-title">
           <h2 id="navigator-query-title" className="text-xl font-bold">Опишите задачу своими словами</h2>
           <p className="mt-1 text-sm text-[#737373]">Например: «Хочу найти подходящую работу». Не вводите ФИО, телефон и данные документов.</p>
@@ -166,7 +230,7 @@ export function NavigatorPage() {
             <span className="text-sm text-[#737373]">{catalogLoading || matchesLoading ? 'Загружаем меры…' : `Карточек: ${cards.length}`}</span>
           </div>
           {!isPilotRegion && <p className="mt-5 rounded-xl border border-[#d9e6f2] bg-[#f0f4f8] p-4 text-sm text-[#404040]">Региональные сценарии прототипа сейчас показаны только для Владимирской и Калужской областей. Выберите один из этих регионов, чтобы увидеть пример.</p>}
-          {!catalogLoading && catalog === null && <p className="mt-5 rounded-xl border border-[#eedab0] bg-[#fffbeb] p-4 text-sm text-[#5c470f]">Каталог сервера сейчас недоступен. Показаны только демонстрационные сценарии без действующих мер.</p>}
+          {!catalogLoading && catalog === null && (!user || !profileSaved) && <p className="mt-5 rounded-xl border border-[#eedab0] bg-[#fffbeb] p-4 text-sm text-[#5c470f]">Каталог сервера сейчас недоступен. Показаны только демонстрационные сценарии без действующих мер.</p>}
           {cards.length === 0 && !matchesLoading && (!user || !profileSaved || matches !== null) && <p className="mt-5 rounded-xl border border-[#d9e6f2] bg-white p-5 text-sm text-[#404040]">Для этой группы и темы карточки ещё не добавлены или не совпали с ответами анкеты. Это не означает отсутствия права на поддержку — каталог пока наполняется.</p>}
           {user && profileSaved && !matchesLoading && matches === null && <p className="mt-5 rounded-xl border border-[#eedab0] bg-[#fffbeb] p-4 text-sm text-[#5c470f]">Персональный подбор сейчас недоступен. Попробуйте обновить страницу позже.</p>}
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
@@ -174,10 +238,11 @@ export function NavigatorPage() {
               <span className="rounded-full bg-[#f0f4f8] px-3 py-1 text-xs font-semibold text-[#2c5f8d]">{card.regionId === 'all' ? (card.source ? 'Федеральная мера' : 'Общий сценарий') : region?.name}</span>
               <h3 className="mt-4 text-xl font-bold">{card.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-[#525252]">{card.purpose}</p>
+              {user && profileSaved && card.source && (routeById.has(card.id) ? <p className="mt-4 rounded-xl bg-[#e7eff6] p-3 text-sm font-semibold text-[#163859]">Маршрут сохранён · выполнено {routeById.get(card.id)?.completed_step_indices.length} из {card.steps.length} шагов</p> : <button type="button" disabled={progressBusy} onClick={() => void saveRoute(Number(card.id))} className="mt-4 min-h-11 rounded-xl border border-[#2c5f8d] px-4 font-semibold text-[#2c5f8d] disabled:opacity-50">Сохранить маршрут</button>)}
               {matchById.has(card.id) && <div className="mt-4 rounded-xl border border-[#c7d9e9] bg-[#f0f4f8] p-4 text-sm leading-relaxed"><p className="font-semibold text-[#163859]">Почему показана</p><ul className="mt-2 list-disc pl-5">{matchById.get(card.id)?.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul><p className="mt-3 font-semibold text-[#5c470f]">Что проверить</p><ul className="mt-1 list-disc pl-5 text-[#5c470f]">{matchById.get(card.id)?.checks.map((check) => <li key={check}>{check}</li>)}</ul></div>}
               {card.eligibility && <p className="mt-4 rounded-xl bg-[#f0f4f8] p-4 text-sm leading-relaxed"><strong>Кому подходит: </strong>{card.eligibility}</p>}
               <ol className="mt-6 space-y-4">
-                {card.steps.map((step, index) => <li key={step.title} className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e7eff6] text-sm font-bold text-[#1e4976]">{index + 1}</span><div><p className="font-semibold">{step.title}</p><p className="mt-1 text-sm leading-relaxed text-[#525252]">{step.detail}</p></div></li>)}
+                {card.steps.map((step, index) => <li key={`${index}-${step.title}`} className="flex gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e7eff6] text-sm font-bold text-[#1e4976]">{index + 1}</span><div className="min-w-0"><p className="font-semibold">{step.title}</p><p className="mt-1 text-sm leading-relaxed text-[#525252]">{step.detail}</p>{routeById.has(card.id) && <label className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#2c5f8d]"><input type="checkbox" checked={routeById.get(card.id)?.completed_step_indices.includes(index) || false} disabled={progressBusy || !routeById.get(card.id)?.available} onChange={(event) => void toggleStep(Number(card.id), index, event.target.checked)} className="h-5 w-5 accent-[#2c5f8d]" />Шаг выполнен</label>}</div></li>)}
               </ol>
               {card.source ? <div className="mt-6 space-y-3 border-t border-[#e5e5e5] pt-5 text-sm leading-relaxed text-[#404040]">
                 <p><strong>Документы:</strong> {card.documents}</p>

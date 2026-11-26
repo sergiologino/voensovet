@@ -46,6 +46,15 @@ export interface NavigatorProfile {
 
 export interface NavigatorMatch { measure: BenefitMeasure; reasons: string[]; checks: string[] }
 
+export interface NavigatorRoute {
+  measure_id: number;
+  saved_at: string;
+  updated_at: string;
+  available: boolean;
+  completed_step_indices: number[];
+  measure: { id: number; title: string; topic: BenefitMeasure['topic']; steps: BenefitMeasure['steps'] };
+}
+
 export type BenefitMeasureInput = Omit<BenefitMeasure, 'id' | 'status' | 'updated_at'>;
 
 // Отладка для проверки переменных окружения
@@ -224,6 +233,22 @@ export const api = {
     const params = new URLSearchParams({ topic });
     if (locality) params.set('locality', locality);
     return request<{ matches: NavigatorMatch[] }>(`/api/navigator/matches?${params}`);
+  },
+
+  async getNavigatorRoutes() {
+    return request<{ routes: NavigatorRoute[] }>('/api/navigator/progress');
+  },
+
+  async saveNavigatorRoute(measureId: number, locality = '') {
+    return request<{ message: string }>(`/api/navigator/progress/${measureId}`, { method: 'POST', body: JSON.stringify({ locality }) });
+  },
+
+  async setNavigatorStep(measureId: number, stepIndex: number, completed: boolean) {
+    return request<{ completed_step_index: number; completed: boolean }>(`/api/navigator/progress/${measureId}/steps/${stepIndex}`, { method: 'PUT', body: JSON.stringify({ completed }) });
+  },
+
+  async removeNavigatorRoute(measureId: number) {
+    return request<{ message: string }>(`/api/navigator/progress/${measureId}`, { method: 'DELETE' });
   },
 
   // Get user's own AI requests

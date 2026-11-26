@@ -1,4 +1,5 @@
 import { MEASURE_AUDIENCES } from './measures.js';
+import { createHash } from 'node:crypto';
 
 export const DISABILITY = ['none', 'I', 'II', 'III', 'unknown'];
 export const RELATIONSHIPS = ['spouse', 'parent', 'child', 'other', 'none'];
@@ -49,4 +50,8 @@ export function evaluateMeasure(measure, profile) {
   if (rules.requires_veteran_card && profile.audience === 'status-pending') checks.push('Для обращения потребуется удостоверение ветерана боевых действий');
   checks.push('Сверьте остальные условия и документы на официальной странице');
   return { measure, reasons, checks };
+}
+
+export function stepKey(step, index) {
+  return createHash('sha256').update(JSON.stringify([index, step.title, step.detail])).digest('hex');
 }

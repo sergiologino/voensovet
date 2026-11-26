@@ -338,6 +338,22 @@ async function createTables() {
     housing VARCHAR(30) NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS navigator_routes (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    measure_id BIGINT NOT NULL REFERENCES benefit_measures(id) ON DELETE CASCADE,
+    selected_locality TEXT NOT NULL DEFAULT '',
+    saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, measure_id)
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS navigator_completed_steps (
+    user_id INTEGER NOT NULL,
+    measure_id BIGINT NOT NULL,
+    step_key CHAR(64) NOT NULL,
+    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, measure_id, step_key),
+    FOREIGN KEY (user_id, measure_id) REFERENCES navigator_routes(user_id, measure_id) ON DELETE CASCADE
+  )`);
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_benefit_measures_public
     ON benefit_measures (status, region_id, topic)

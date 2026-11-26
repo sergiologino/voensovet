@@ -2,9 +2,11 @@ import express from 'express';
 import { pool } from '../db/init.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { evaluateMeasure, normalizeNavigatorProfile } from '../navigator.js';
+import { navigatorProgressRouter } from './navigatorProgress.js';
 
 export const navigatorRouter = express.Router();
 navigatorRouter.use(authenticateToken);
+navigatorRouter.use('/progress', navigatorProgressRouter);
 
 navigatorRouter.get('/profile', async (req, res, next) => {
   try {
