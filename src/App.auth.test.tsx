@@ -39,6 +39,19 @@ describe('OAuth callback on a fresh page load', () => {
     await act(async () => { root.unmount(); });
   });
 
+  it('explains an existing email account and points to password login', async () => {
+    window.history.replaceState({}, '', '/#auth-callback?error=email_in_use');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => { root.render(<App />); });
+    expect(container.textContent).toContain('Войдите по почте и привяжите Яндекс');
+    expect(container.querySelector('button')?.textContent).toBe('Войти по почте');
+    await act(async () => { container.querySelector('button')?.click(); });
+    expect(container.querySelector('input[type="email"]')).not.toBeNull();
+    await act(async () => { root.unmount(); });
+  });
+
   it('opens the profile and removes the token from the URL after login', async () => {
     window.history.replaceState({}, '', '/#auth-callback?token=test-token');
     const container = document.createElement('div');

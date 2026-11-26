@@ -9,11 +9,13 @@ import InputMask from 'react-input-mask';
 interface LoginProps {
   onClose?: () => void;
   onSwitchToRegister?: () => void;
+  onSuccess?: () => void;
+  initialContactType?: 'phone' | 'email';
 }
 
-export function Login({ onClose, onSwitchToRegister }: LoginProps) {
+export function Login({ onClose, onSwitchToRegister, onSuccess, initialContactType = 'phone' }: LoginProps) {
   const { login } = useAuth();
-  const [contactType, setContactType] = useState<'phone' | 'email'>('phone');
+  const [contactType, setContactType] = useState<'phone' | 'email'>(initialContactType);
   const [phone, setPhone] = useState('+7 ');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +49,7 @@ export function Login({ onClose, onSwitchToRegister }: LoginProps) {
     setLoading(true);
     try {
       await login(contact, password, captcha);
+      onSuccess?.();
       onClose?.();
     } catch (err: any) {
       setError(err.message || 'Ошибка входа');

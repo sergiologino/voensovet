@@ -8,6 +8,7 @@ interface User {
   fullName?: string;
   isAdmin: boolean;
   regionId?: string | null;
+  yandexLinked?: boolean;
 }
 
 interface AuthContextType {

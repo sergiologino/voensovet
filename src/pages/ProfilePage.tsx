@@ -23,6 +23,25 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.hash.split('?')[1] || '').get('linked') === 'yandex') {
+      setMessage({ type: 'success', text: 'Яндекс привязан. Теперь можно входить в этот аккаунт через Яндекс.' });
+      window.history.replaceState({}, document.title, `${window.location.pathname}#profile`);
+      refreshUser();
+    }
+  }, [refreshUser]);
+
+  const handleYandexLink = async () => {
+    setLoading(true);
+    try {
+      const { url } = await api.startYandexLink();
+      window.location.href = url;
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+      setLoading(false);
+    }
+  };
+
   // Post-auth redirect: used by Entry Landing / VoenKot button to return user to desired page.
   useEffect(() => {
     if (!user) return;
@@ -486,6 +505,20 @@ export function ProfilePage() {
                   {loading ? 'Сохранение...' : 'Сохранить изменения'}
                 </Button>
               </form>
+            </div>
+
+            <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-[#262626] mb-2">Вход через Яндекс</h2>
+              {user?.yandexLinked ? (
+                <p className="text-[#404040]">Яндекс привязан к вашему аккаунту.</p>
+              ) : (
+                <>
+                  <p className="text-[#737373] mb-4">Привяжите Яндекс после входа по почте, чтобы сохранить данные этого аккаунта.</p>
+                  <Button type="button" onClick={handleYandexLink} disabled={loading}>
+                    {loading ? 'Переход к Яндексу...' : 'Привязать Яндекс'}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Change Password */}

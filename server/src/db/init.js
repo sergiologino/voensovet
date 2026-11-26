@@ -164,6 +164,15 @@ async function createTables() {
   `);
   console.log('✅ user_sessions table created');
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS yandex_link_states (
+      state_hash VARCHAR(64) PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      session_id INTEGER NOT NULL REFERENCES user_sessions(id) ON DELETE CASCADE,
+      expires_at TIMESTAMP NOT NULL
+    )
+  `);
+
   // Таблица истории запросов пользователя (куда ходил)
   console.log('📋 Creating user_requests table...');
   await pool.query(`

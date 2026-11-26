@@ -126,6 +126,10 @@ export const api = {
     return request<{ user: any }>('/api/auth/me');
   },
 
+  async startYandexLink() {
+    return request<{ url: string }>('/api/auth/yandex/link', { method: 'POST' });
+  },
+
   // User
   async getEnabledRegions() {
     return request<{ regionIds: string[] }>('/api/regions');

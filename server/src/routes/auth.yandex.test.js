@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import bcrypt from 'bcryptjs';
 
 const query = vi.hoisted(() => vi.fn(async (sql) => {
   if (sql.includes('WHERE yandex_id')) return { rows: [{ id: 4, email: 'test@example.test', region_id: 'vladimir' }] };
@@ -8,7 +10,11 @@ const query = vi.hoisted(() => vi.fn(async (sql) => {
 const post = vi.hoisted(() => vi.fn(async () => ({ data: { access_token: 'test-yandex-token' } })));
 const get = vi.hoisted(() => vi.fn(async () => ({ data: { id: 'yandex-user-4' } })));
 vi.mock('../db/init.js', () => ({ pool: { query } }));
-vi.mock('../middleware/auth.js', () => ({ authenticateToken: (_req, _res, next) => next() }));
+vi.mock('../middleware/auth.js', () => ({ authenticateToken: (req, _res, next) => {
+  req.user = { id: 4, yandex_id: null };
+  req.session = { id: 8 };
+  next();
+} }));
 vi.mock('axios', () => ({ default: { post, get } }));
 
 const { default: authRoutes } = await import('./auth.js');
@@ -16,7 +22,7 @@ let server;
 let baseUrl;
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-only-secret';
-  const app = express(); app.use(express.json()); app.use('/api/auth', authRoutes);
+  const app = express(); app.use(express.json()); app.use(cookieParser()); app.use('/api/auth', authRoutes);
   server = await new Promise((resolve) => { const listening = app.listen(0, '127.0.0.1', () => resolve(listening)); });
   baseUrl = `http://127.0.0.1:${server.address().port}/api/auth/yandex`;
 });
@@ -75,5 +81,76 @@ describe('Yandex OAuth', () => {
     } finally {
       log.mockRestore();
     }
+  });
+
+  it('does not silently merge a Yandex account with an existing email account', async () => {
+    process.env.YANDEX_CLIENT_ID = 'client-id';
+    process.env.YANDEX_CLIENT_SECRET = 'client-secret';
+    get.mockResolvedValueOnce({ data: { id: 'new-yandex-id', default_email: 'member@example.test' } });
+    query.mockImplementationOnce(async () => ({ rows: [] }));
+    query.mockImplementationOnce(async () => ({ rows: [{ id: 4 }] }));
+    const response = await fetch(`${baseUrl}/callback?code=test-code`, { redirect: 'manual' });
+    expect(response.headers.get('location')).toBe('https://voensovet.ru/#auth-callback?error=email_in_use');
+    expect(query.mock.calls.some(([sql]) => sql.includes('INSERT INTO users'))).toBe(false);
+  });
+
+  it('links Yandex only after an authenticated start and matching state cookie', async () => {
+    process.env.YANDEX_CLIENT_ID = 'client-id';
+    process.env.YANDEX_CLIENT_SECRET = 'client-secret';
+    const start = await fetch(`${baseUrl}/link`, { method: 'POST' });
+    expect(start.status).toBe(200);
+    const { url } = await start.json();
+    const state = new URL(url).searchParams.get('state');
+    const cookie = start.headers.get('set-cookie').split(';')[0];
+    expect(state).toMatch(/^[a-f0-9]{64}$/);
+    query.mockImplementationOnce(async () => ({ rows: [{ user_id: 4, session_id: 8 }] }));
+    query.mockImplementationOnce(async () => ({ rows: [{ user_id: 4 }] }));
+    query.mockImplementationOnce(async () => ({ rows: [] }));
+    query.mockImplementationOnce(async () => ({ rows: [{ id: 4 }] }));
+    const callback = await fetch(`${baseUrl}/callback?code=test-code&state=${encodeURIComponent(state)}`, {
+      redirect: 'manual', headers: { Cookie: cookie }
+    });
+    expect(callback.headers.get('location')).toBe('https://voensovet.ru/#profile?linked=yandex');
+    expect(query.mock.calls.some(([sql]) => sql.includes('INSERT INTO users'))).toBe(false);
+    expect(query.mock.calls.some(([sql]) => sql.includes('UPDATE users SET yandex_id'))).toBe(true);
+  });
+
+  it('rejects a link callback without its state cookie', async () => {
+    process.env.YANDEX_CLIENT_ID = 'client-id';
+    process.env.YANDEX_CLIENT_SECRET = 'client-secret';
+    const callback = await fetch(`${baseUrl}/callback?code=test-code&state=forged`, { redirect: 'manual' });
+    expect(callback.headers.get('location')).toBe('https://voensovet.ru/#auth-callback?error=link_failed');
+    expect(post).not.toHaveBeenCalled();
+    expect(query.mock.calls.some(([sql]) => sql.includes('UPDATE users'))).toBe(false);
+  });
+
+  it('does not reassign a Yandex identity linked to another user', async () => {
+    process.env.YANDEX_CLIENT_ID = 'client-id';
+    process.env.YANDEX_CLIENT_SECRET = 'client-secret';
+    const start = await fetch(`${baseUrl}/link`, { method: 'POST' });
+    const state = new URL((await start.json()).url).searchParams.get('state');
+    const cookie = start.headers.get('set-cookie').split(';')[0];
+    query.mockImplementationOnce(async () => ({ rows: [{ user_id: 4, session_id: 8 }] }));
+    query.mockImplementationOnce(async () => ({ rows: [{ user_id: 4 }] }));
+    query.mockImplementationOnce(async () => ({ rows: [{ id: 99 }] }));
+    const callback = await fetch(`${baseUrl}/callback?code=test-code&state=${encodeURIComponent(state)}`, {
+      redirect: 'manual', headers: { Cookie: cookie }
+    });
+    expect(callback.headers.get('location')).toBe('https://voensovet.ru/#auth-callback?error=link_failed');
+    expect(query.mock.calls.some(([sql]) => sql.includes('UPDATE users'))).toBe(false);
+  });
+
+  it('reports an existing Yandex link after password login', async () => {
+    const passwordHash = await bcrypt.hash('password123', 4);
+    query.mockImplementationOnce(async () => ({ rows: [{
+      id: 4, email: 'member@example.test', password_hash: passwordHash,
+      yandex_id: 'yandex-user-4', region_id: 'vladimir', is_admin: false
+    }] }));
+    const response = await fetch(baseUrl.replace('/yandex', '/login'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: 'member@example.test', password: 'password123', captcha: '1' })
+    });
+    expect(response.status).toBe(200);
+    expect((await response.json()).user.yandexLinked).toBe(true);
   });
 });

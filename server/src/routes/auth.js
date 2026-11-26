@@ -6,6 +6,7 @@ import { pool } from '../db/init.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { isEnabledRegionId, getEnabledRegionIds } from '../regions.js';
 import rateLimit from 'express-rate-limit';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const router = express.Router();
 
@@ -221,7 +222,8 @@ router.post('/login', authLimiter, async (req, res, next) => {
         email: user.email,
         fullName: user.full_name,
         isAdmin: user.is_admin,
-        regionId: user.region_id
+        regionId: user.region_id,
+        yandexLinked: Boolean(user.yandex_id)
       },
       token
     });
@@ -255,25 +257,56 @@ router.get('/me', authenticateToken, async (req, res) => {
       email: req.user.email,
       fullName: req.user.full_name,
       isAdmin: req.user.is_admin,
-      regionId: req.user.region_id
+      regionId: req.user.region_id,
+      yandexLinked: Boolean(req.user.yandex_id)
     }
   });
 });
 
-// OAuth Yandex - начало авторизации
-router.get('/yandex', (req, res) => {
+function yandexAuthorizationUrl(state) {
   const clientId = process.env.YANDEX_CLIENT_ID?.trim();
   const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim();
   const redirectUri = process.env.YANDEX_REDIRECT_URI?.trim();
   const frontendUrl = process.env.FRONTEND_URL?.trim();
-  if (!clientId || !clientSecret || !redirectUri || !frontendUrl) {
-    return res.status(503).json({ error: 'Вход через Яндекс не настроен. Обратитесь к администратору.' });
-  }
+  if (!clientId || !clientSecret || !redirectUri || !frontendUrl) return null;
   const url = new URL('https://oauth.yandex.ru/authorize');
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirectUri);
-  res.redirect(url.toString());
+  if (state) url.searchParams.set('state', state);
+  return url.toString();
+}
+
+// OAuth Yandex - начало авторизации
+router.get('/yandex', (req, res) => {
+  const url = yandexAuthorizationUrl();
+  if (!url) {
+    return res.status(503).json({ error: 'Вход через Яндекс не настроен. Обратитесь к администратору.' });
+  }
+  res.redirect(url);
+});
+
+// Привязка Яндекса начинается только из действующей сессии существующего аккаунта.
+router.post('/yandex/link', authenticateToken, async (req, res, next) => {
+  try {
+    if (req.user.yandex_id) return res.status(409).json({ error: 'Яндекс уже привязан к этому аккаунту' });
+    const state = randomBytes(32).toString('hex');
+    const url = yandexAuthorizationUrl(state);
+    if (!url) return res.status(503).json({ error: 'Вход через Яндекс не настроен. Обратитесь к администратору.' });
+    const stateHash = createHash('sha256').update(state).digest('hex');
+    await pool.query('DELETE FROM yandex_link_states WHERE expires_at <= NOW()');
+    await pool.query(
+      "INSERT INTO yandex_link_states (state_hash, user_id, session_id, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '10 minutes')",
+      [stateHash, req.user.id, req.session.id]
+    );
+    res.cookie('yandex_link_state', state, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax',
+      path: '/api/auth/yandex/callback', maxAge: 10 * 60 * 1000
+    });
+    res.json({ url });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // OAuth Yandex - callback
@@ -281,11 +314,38 @@ router.get('/yandex/callback', async (req, res, next) => {
   const frontendUrl = process.env.FRONTEND_URL?.trim().replace(/\/+$/, '');
   if (!frontendUrl) return res.status(503).json({ error: 'Адрес сайта не настроен' });
   let stage = 'authorization';
+  const state = req.query.state;
+  const isLink = state !== undefined;
   try {
     const { code } = req.query;
 
     if (!code) {
-      return res.redirect(`${frontendUrl}/#auth-callback?error=oauth_failed`);
+      return res.redirect(`${frontendUrl}/#auth-callback?error=${isLink ? 'link_failed' : 'oauth_failed'}`);
+    }
+
+    let linkUserId = null;
+    if (isLink) {
+      stage = 'link_state';
+      const cookieState = req.cookies?.yandex_link_state;
+      res.clearCookie('yandex_link_state', { path: '/api/auth/yandex/callback' });
+      if (typeof state !== 'string' || typeof cookieState !== 'string' ||
+          state.length !== cookieState.length ||
+          !timingSafeEqual(Buffer.from(state), Buffer.from(cookieState))) {
+        return res.redirect(`${frontendUrl}/#auth-callback?error=link_failed`);
+      }
+      const stateHash = createHash('sha256').update(state).digest('hex');
+      const linkState = await pool.query(
+        'DELETE FROM yandex_link_states WHERE state_hash = $1 AND expires_at > NOW() RETURNING user_id, session_id',
+        [stateHash]
+      );
+      if (!linkState.rows[0]) return res.redirect(`${frontendUrl}/#auth-callback?error=link_failed`);
+      const session = await pool.query(
+        'SELECT user_id FROM user_sessions WHERE id = $1 AND expires_at > NOW()', [linkState.rows[0].session_id]
+      );
+      if (session.rows[0]?.user_id !== linkState.rows[0].user_id) {
+        return res.redirect(`${frontendUrl}/#auth-callback?error=link_failed`);
+      }
+      linkUserId = linkState.rows[0].user_id;
     }
 
     // Обмениваем код на токен
@@ -310,12 +370,31 @@ router.get('/yandex/callback', async (req, res, next) => {
     const yandexUser = userInfoResponse.data;
     const yandexId = yandexUser.id;
 
-    // Ищем или создаем пользователя
+    // Существующий аккаунт привязываем только после входа в него по паролю.
     stage = 'user_lookup';
     let userResult = await pool.query('SELECT * FROM users WHERE yandex_id = $1', [yandexId]);
 
+    if (isLink) {
+      if (userResult.rows.length > 0 && userResult.rows[0].id !== linkUserId) {
+        return res.redirect(`${frontendUrl}/#auth-callback?error=link_failed`);
+      }
+      stage = 'user_link';
+      const linked = await pool.query(
+        'UPDATE users SET yandex_id = $1 WHERE id = $2 AND (yandex_id IS NULL OR yandex_id = $1) RETURNING id',
+        [yandexId, linkUserId]
+      );
+      if (linked.rows.length === 0) return res.redirect(`${frontendUrl}/#auth-callback?error=link_failed`);
+      return res.redirect(`${frontendUrl}/#profile?linked=yandex`);
+    }
+
     let user;
     if (userResult.rows.length === 0) {
+      if (yandexUser.default_email) {
+        const existingEmail = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [yandexUser.default_email]);
+        if (existingEmail.rows.length > 0) {
+          return res.redirect(`${frontendUrl}/#auth-callback?error=email_in_use`);
+        }
+      }
       // Создаем нового пользователя
       stage = 'user_create';
       const result = await pool.query(
@@ -352,7 +431,8 @@ router.get('/yandex/callback', async (req, res, next) => {
       providerCode: error.response?.data?.error,
       databaseCode: error.code
     });
-    res.redirect(`${frontendUrl}/#auth-callback?error=oauth_failed`);
+    const errorCode = isLink ? 'link_failed' : stage === 'user_create' && error.code === '23505' ? 'email_in_use' : 'oauth_failed';
+    res.redirect(`${frontendUrl}/#auth-callback?error=${errorCode}`);
   }
 });
 
