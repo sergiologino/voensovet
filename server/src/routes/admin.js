@@ -1,12 +1,14 @@
 import express from 'express';
 import { pool } from '../db/init.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { adminMeasuresRouter } from './measures.js';
 
 const router = express.Router();
 
 // Все роуты требуют авторизации и прав администратора
 router.use(authenticateToken);
 router.use(requireAdmin);
+router.use('/measures', adminMeasuresRouter);
 
 // Получить настройки админа (промпты)
 router.get('/settings', async (req, res, next) => {
@@ -32,7 +34,19 @@ router.get('/settings', async (req, res, next) => {
 // Обновить настройки админа (промпты)
 router.put('/settings', async (req, res, next) => {
   try {
-    const { primaryPrompt, secondaryPrompt } = req.body;
+    const { primaryPrompt, secondaryPrompt, enabledRegions } = req.body;
+
+    if (enabledRegions !== undefined) {
+      if (!Array.isArray(enabledRegions) || enabledRegions.length === 0 || !enabledRegions.every((id) => typeof id === 'string' && /^[a-z][a-z_]{1,40}$/.test(id))) {
+        return res.status(400).json({ error: 'Выберите хотя бы один корректный регион' });
+      }
+      await pool.query(
+        `INSERT INTO admin_settings (key, value, updated_by, updated_at)
+         VALUES ('enabled_regions', $1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = CURRENT_TIMESTAMP`,
+        [JSON.stringify([...new Set(enabledRegions)]), req.user.id]
+      );
+    }
 
     if (primaryPrompt !== undefined) {
       await pool.query(

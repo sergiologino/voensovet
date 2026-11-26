@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
+import regionRoutes from './routes/regions.js';
+import { publicMeasuresRouter } from './routes/measures.js';
 
 // Проверка обязательных переменных окружения
 const requiredEnvVars = ['JWT_SECRET'];
@@ -46,14 +48,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/regions', regionRoutes);
+app.use('/api/measures', publicMeasuresRouter);
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  console.error('Request failed', { status: err.status || 500, code: err.code || 'unknown' });
+  res.status(err.status || 500).json({ error: 'Ошибка обработки запроса' });
 });
 
 // Initialize database and start server
@@ -64,7 +65,7 @@ initDatabase()
     });
   })
   .catch((error) => {
-    console.error('❌ Failed to initialize database:', error);
+    console.error('Failed to initialize database', { code: error.code || 'unknown' });
     process.exit(1);
   });
 

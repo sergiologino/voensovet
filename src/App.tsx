@@ -13,6 +13,7 @@ import { ReturnToLifePage } from './pages/ReturnToLifePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminPage } from './pages/AdminPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { NavigatorPage } from './pages/NavigatorPage';
 import { RegionProvider } from './context/RegionContext';
 import { AuthProvider } from './context/AuthContext';
 import { PageTracker } from './components/PageTracker';
@@ -55,6 +56,7 @@ function AppContent() {
       'profile': 'profile',
       'admin': 'admin',
       'auth-callback': 'auth-callback',
+      'navigator': 'navigator',
     };
 
     return routes[initialHash] || 'home';
@@ -80,6 +82,7 @@ function AppContent() {
         'profile': 'profile',
         'admin': 'admin',
         'auth-callback': 'auth-callback',
+        'navigator': 'navigator',
       };
       setCurrentPage(routes[hash] || 'home');
     };
@@ -108,6 +111,7 @@ function AppContent() {
     'profile': <ProfilePage />,
     'admin': <AdminPage />,
     'auth-callback': <AuthCallbackPage />,
+    'navigator': <NavigatorPage />,
   };
 
   return (

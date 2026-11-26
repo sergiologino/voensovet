@@ -20,7 +20,7 @@ export async function initDatabase() {
     await createTables();
     console.log('✅ Database tables initialized');
   } catch (error) {
-    console.error('❌ Database initialization error:', error);
+    console.error('Database initialization failed', { code: error.code || 'unknown' });
     throw error;
   }
 }
@@ -36,6 +36,7 @@ async function createTables() {
       email VARCHAR(255) UNIQUE,
       password_hash VARCHAR(255),
       full_name VARCHAR(255),
+      region_id VARCHAR(40),
       is_admin BOOLEAN DEFAULT FALSE,
       yandex_id VARCHAR(255) UNIQUE,
       provider VARCHAR(50) DEFAULT 'local',
@@ -64,7 +65,12 @@ async function createTables() {
         RAISE NOTICE 'Column yandex_id added to users table';
       END IF;
       
-      -- Добавляем full_name если не существует
+      -- Регион проживания для маршрута поддержки
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name = 'users' AND column_name = 'region_id') THEN
+        ALTER TABLE users ADD COLUMN region_id VARCHAR(40);
+      END IF;
+
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                      WHERE table_name = 'users' AND column_name = 'full_name') THEN
         ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
@@ -277,9 +283,47 @@ async function createTables() {
     VALUES 
       ('primary_prompt', 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы. Ответ должен быть кратким и структурированным.'),
       ('secondary_prompt', 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ, учитывая контекст и специфику вопроса.')
+      ,('enabled_regions', '["vladimir","kaluga"]')
     ON CONFLICT (key) DO NOTHING
   `);
   console.log('✅ Default admin settings inserted');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS benefit_measures (
+      id BIGSERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      topic VARCHAR(30) NOT NULL,
+      scope VARCHAR(10) NOT NULL CHECK (scope IN ('federal', 'regional')),
+      region_id VARCHAR(40),
+      locality TEXT NOT NULL DEFAULT '',
+      audiences JSONB NOT NULL DEFAULT '[]'::jsonb,
+      summary TEXT NOT NULL DEFAULT '',
+      eligibility TEXT NOT NULL DEFAULT '',
+      exclusions TEXT NOT NULL DEFAULT '',
+      documents JSONB NOT NULL DEFAULT '[]'::jsonb,
+      steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+      agency TEXT NOT NULL DEFAULT '',
+      apply_url TEXT NOT NULL DEFAULT '',
+      timing TEXT NOT NULL DEFAULT '',
+      source_url TEXT NOT NULL DEFAULT '',
+      source_checked_at DATE,
+      status VARCHAR(10) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+      updated_by INTEGER REFERENCES users(id),
+      reviewed_by INTEGER REFERENCES users(id),
+      published_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT benefit_measure_region_scope CHECK (
+        (scope = 'federal' AND region_id IS NULL AND locality = '') OR
+        (scope = 'regional' AND region_id IS NOT NULL)
+      )
+    )
+  `);
+  await pool.query("ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS locality TEXT NOT NULL DEFAULT ''");
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_benefit_measures_public
+    ON benefit_measures (status, region_id, topic)
+  `);
   console.log('🎉 All tables and migrations completed successfully!');
 }
 

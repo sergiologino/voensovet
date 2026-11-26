@@ -2,19 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { Alert } from '../components/ui/Alert';
 import { api } from '../api/client';
 import { Settings, Users, BarChart3 } from 'lucide-react';
+import { REGIONS } from '../constants/regions';
+import { MeasureEditor } from '../components/admin/MeasureEditor';
 
 export function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'stats' | 'users' | 'ai-requests'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'regions' | 'measures' | 'stats' | 'users' | 'ai-requests'>('regions');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Settings
   const [primaryPrompt, setPrimaryPrompt] = useState('');
   const [secondaryPrompt, setSecondaryPrompt] = useState('');
+  const [enabledRegions, setEnabledRegions] = useState<string[]>(['vladimir', 'kaluga']);
+  const [regionSearch, setRegionSearch] = useState('');
 
   // Stats
   const [stats, setStats] = useState<any>(null);
@@ -28,7 +31,7 @@ export function AdminPage() {
   const [loadingAiRequests, setLoadingAiRequests] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'settings') {
+    if (activeTab === 'settings' || activeTab === 'regions') {
       loadSettings();
     } else if (activeTab === 'stats') {
       loadStats();
@@ -44,6 +47,8 @@ export function AdminPage() {
       const data = await api.getAdminSettings();
       setPrimaryPrompt(data.settings.primary_prompt?.value || '');
       setSecondaryPrompt(data.settings.secondary_prompt?.value || '');
+      const configured = JSON.parse(data.settings.enabled_regions?.value || '["vladimir","kaluga"]');
+      setEnabledRegions(Array.isArray(configured) ? configured : ['vladimir', 'kaluga']);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     }
@@ -97,6 +102,19 @@ export function AdminPage() {
     }
   };
 
+  const handleSaveRegions = async () => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      await api.updateAdminSettings(undefined, undefined, enabledRegions);
+      setMessage({ type: 'success', text: 'Доступные регионы сохранены' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="min-h-screen bg-white">
@@ -107,6 +125,8 @@ export function AdminPage() {
         {/* Tabs */}
         <div className="border-b-2 border-[#e5e5e5] mb-8">
           <div className="flex gap-4 flex-wrap">
+            <button onClick={() => setActiveTab('regions')} className={`px-4 py-2 font-medium ${activeTab === 'regions' ? 'border-b-2 border-[#2c5f8d] text-[#2c5f8d]' : 'text-[#737373]'}`}>Регионы</button>
+            <button onClick={() => setActiveTab('measures')} className={`px-4 py-2 font-medium ${activeTab === 'measures' ? 'border-b-2 border-[#2c5f8d] text-[#2c5f8d]' : 'text-[#737373]'}`}>Меры поддержки</button>
             <button
               onClick={() => setActiveTab('settings')}
               className={`px-4 py-2 font-medium transition-colors ${
@@ -160,6 +180,17 @@ export function AdminPage() {
         )}
 
         {/* Settings Tab */}
+        {activeTab === 'measures' && <MeasureEditor />}
+        {activeTab === 'regions' && <section className="max-w-2xl rounded-2xl border-2 border-[#e5e5e5] p-5 sm:p-6">
+          <h2 className="text-xl font-semibold">Регионы, доступные пользователям</h2>
+          <p className="mt-2 text-sm text-[#525252]">Сейчас для пилота включены Владимирская и Калужская области. Включение региона добавит его в выбор, но не создаст меры поддержки.</p>
+          <label htmlFor="admin-region-search" className="mt-5 block text-sm font-medium">Поиск региона</label>
+          <input id="admin-region-search" value={regionSearch} onChange={(event) => setRegionSearch(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border-2 border-[#d4d4d4] px-4" placeholder="Название региона" />
+          <div className="mt-4 max-h-80 space-y-1 overflow-y-auto rounded-xl border border-[#e5e5e5] p-2">
+            {REGIONS.filter((region) => region.name.toLocaleLowerCase('ru').includes(regionSearch.toLocaleLowerCase('ru'))).map((region) => <label key={region.id} className="flex min-h-12 items-center gap-3 rounded-lg px-3 hover:bg-[#f0f4f8]"><input type="checkbox" checked={enabledRegions.includes(region.id)} onChange={(event) => setEnabledRegions((current) => event.target.checked ? [...current, region.id] : current.filter((id) => id !== region.id))} className="h-5 w-5 accent-[#2c5f8d]" /><span>{region.name}</span></label>)}
+          </div>
+          <button type="button" disabled={loading || enabledRegions.length === 0} onClick={handleSaveRegions} className="mt-5 min-h-12 rounded-xl bg-[#2c5f8d] px-6 font-semibold text-white disabled:bg-[#d4d4d4]">Сохранить регионы</button>
+        </section>}
         {activeTab === 'settings' && (
           <div className="bg-white border-2 border-[#e5e5e5] rounded-2xl p-6">
             <h2 className="text-xl font-semibold text-[#262626] mb-4">Настройки промптов для AI</h2>

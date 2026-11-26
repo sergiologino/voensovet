@@ -2,6 +2,30 @@
 // или полный URL если указан в переменных окружения
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
+export interface BenefitMeasure {
+  id: number;
+  title: string;
+  topic: 'work' | 'business' | 'education' | 'house' | 'housing' | 'payments';
+  scope: 'federal' | 'regional';
+  region_id: string | null;
+  locality: string;
+  audiences: string[];
+  summary: string;
+  eligibility: string;
+  exclusions: string;
+  documents: string[];
+  steps: { title: string; detail: string }[];
+  agency: string;
+  apply_url: string;
+  timing: string;
+  source_url: string;
+  source_checked_at: string | null;
+  status: 'draft' | 'published';
+  updated_at?: string;
+}
+
+export type BenefitMeasureInput = Omit<BenefitMeasure, 'id' | 'status' | 'updated_at'>;
+
 // Отладка для проверки переменных окружения
 console.log('🔍 API Configuration:');
 console.log('  VITE_API_URL:', import.meta.env.VITE_API_URL);
@@ -54,10 +78,10 @@ export const api = {
     });
   },
 
-  async register(phone: string, password: string, fullName?: string, captcha?: string) {
+  async register(phone: string, password: string, fullName?: string, captcha?: string, regionId?: string) {
     return request<{ user: any; token: string }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ phone, password, fullName, captcha }),
+      body: JSON.stringify({ phone, password, fullName, captcha, regionId }),
     });
   },
 
@@ -72,11 +96,15 @@ export const api = {
   },
 
   // User
+  async getEnabledRegions() {
+    return request<{ regionIds: string[] }>('/api/regions');
+  },
+
   async getProfile() {
     return request<{ user: any }>('/api/user/profile');
   },
 
-  async updateProfile(data: { fullName?: string; email?: string; phone?: string }) {
+  async updateProfile(data: { fullName?: string; email?: string; phone?: string; regionId?: string }) {
     return request<{ user: any }>('/api/user/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -108,10 +136,10 @@ export const api = {
     return request<{ settings: any }>('/api/admin/settings');
   },
 
-  async updateAdminSettings(primaryPrompt?: string, secondaryPrompt?: string) {
+  async updateAdminSettings(primaryPrompt?: string, secondaryPrompt?: string, enabledRegions?: string[]) {
     return request<{ settings: any }>('/api/admin/settings', {
       method: 'PUT',
-      body: JSON.stringify({ primaryPrompt, secondaryPrompt }),
+      body: JSON.stringify({ primaryPrompt, secondaryPrompt, enabledRegions }),
     });
   },
 
@@ -131,6 +159,33 @@ export const api = {
     return request<{ requests: any[]; total: number }>(
       `/api/admin/ai-requests?limit=${limit}&offset=${offset}`
     );
+  },
+
+  async getAdminMeasures() {
+    return request<{ measures: BenefitMeasure[] }>('/api/admin/measures');
+  },
+
+  async createAdminMeasure(measure: BenefitMeasureInput) {
+    return request<{ measure: BenefitMeasure }>('/api/admin/measures', { method: 'POST', body: JSON.stringify(measure) });
+  },
+
+  async updateAdminMeasure(id: number, measure: BenefitMeasureInput) {
+    return request<{ measure: BenefitMeasure }>(`/api/admin/measures/${id}`, { method: 'PUT', body: JSON.stringify(measure) });
+  },
+
+  async publishAdminMeasure(id: number) {
+    return request<{ measure: BenefitMeasure }>(`/api/admin/measures/${id}/publish`, { method: 'POST' });
+  },
+
+  async unpublishAdminMeasure(id: number) {
+    return request<{ measure: BenefitMeasure }>(`/api/admin/measures/${id}/unpublish`, { method: 'POST' });
+  },
+
+  async getPublishedMeasures(regionId: string | null, locality = '') {
+    const params = new URLSearchParams();
+    if (regionId) params.set('regionId', regionId);
+    if (locality) params.set('locality', locality);
+    return request<{ measures: BenefitMeasure[] }>(`/api/measures${params.size ? `?${params}` : ''}`);
   },
 
   // Get user's own AI requests

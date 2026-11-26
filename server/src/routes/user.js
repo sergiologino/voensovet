@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db/init.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { isEnabledRegionId, getEnabledRegionIds } from '../regions.js';
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.use(authenticateToken);
 router.get('/profile', async (req, res, next) => {
   try {
     const result = await pool.query(
-      'SELECT id, phone, email, full_name, is_admin, created_at FROM users WHERE id = $1',
+      'SELECT id, phone, email, full_name, region_id, is_admin, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
 
@@ -29,7 +30,7 @@ router.get('/profile', async (req, res, next) => {
 // Обновить профиль пользователя
 router.put('/profile', async (req, res, next) => {
   try {
-    const { fullName, email, phone } = req.body;
+    const { fullName, email, phone, regionId } = req.body;
     const updates = [];
     const values = [];
     let paramCount = 1;
@@ -37,6 +38,14 @@ router.put('/profile', async (req, res, next) => {
     if (fullName !== undefined) {
       updates.push(`full_name = $${paramCount++}`);
       values.push(fullName);
+    }
+
+    if (regionId !== undefined) {
+      if (!isEnabledRegionId(regionId, await getEnabledRegionIds())) {
+        return res.status(400).json({ error: 'Недоступный регион проживания' });
+      }
+      updates.push(`region_id = $${paramCount++}`);
+      values.push(regionId);
     }
 
     if (email !== undefined) {
@@ -72,7 +81,7 @@ router.put('/profile', async (req, res, next) => {
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(req.user.id);
 
-    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone, email, full_name, is_admin`;
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, phone, email, full_name, region_id, is_admin`;
     
     const result = await pool.query(query, values);
 

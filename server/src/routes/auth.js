@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import { pool } from '../db/init.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { isEnabledRegionId, getEnabledRegionIds } from '../regions.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -45,12 +46,14 @@ function cleanPhone(phone) {
 
 // Регистрация
 router.post('/register', authLimiter, async (req, res, next) => {
-  console.log('📝 Registration request received:', { 
-    body: { ...req.body, password: '***', captcha: '***' } 
-  });
+  console.log('📝 Registration request received');
   
   try {
-    const { phone, password, fullName, captcha } = req.body;
+    const { phone, password, fullName, captcha, regionId } = req.body;
+
+    if (!isEnabledRegionId(regionId, await getEnabledRegionIds())) {
+      return res.status(400).json({ error: 'Выберите доступный регион проживания' });
+    }
 
     if (!phone || !password) {
       console.log('❌ Validation failed: missing phone or password');
@@ -69,7 +72,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
 
     if (isEmailContact) {
       emailValue = phone.toLowerCase().trim();
-      console.log('📧 Email registration:', emailValue);
+      console.log('📧 Email registration');
       
       // Проверяем существует ли пользователь с таким email
       const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [emailValue]);
@@ -80,7 +83,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
     } else {
       // Очищаем телефон от форматирования
       phoneValue = cleanPhone(phone);
-      console.log('📱 Phone registration:', phoneValue);
+      console.log('📱 Phone registration');
       
       // Проверяем существует ли пользователь с таким телефоном
       const existingUser = await pool.query('SELECT id FROM users WHERE phone = $1', [phoneValue]);
@@ -97,14 +100,14 @@ router.post('/register', authLimiter, async (req, res, next) => {
     // Создаем пользователя
     console.log('💾 Creating user in database...');
     const result = await pool.query(
-      `INSERT INTO users (phone, email, password_hash, full_name, provider)
-       VALUES ($1, $2, $3, $4, 'local')
-       RETURNING id, phone, email, full_name, is_admin, created_at`,
-      [phoneValue, emailValue, passwordHash, fullName || null]
+      `INSERT INTO users (phone, email, password_hash, full_name, region_id, provider)
+       VALUES ($1, $2, $3, $4, $5, 'local')
+       RETURNING id, phone, email, full_name, region_id, is_admin, created_at`,
+      [phoneValue, emailValue, passwordHash, fullName || null, regionId]
     );
 
     const user = result.rows[0];
-    console.log('✅ User created successfully:', { id: user.id, phone: user.phone, email: user.email });
+    console.log('✅ User created successfully');
 
     // Создаем сессию
     console.log('🔑 Creating JWT token...');
@@ -136,18 +139,13 @@ router.post('/register', authLimiter, async (req, res, next) => {
         phone: user.phone,
         email: user.email,
         fullName: user.full_name,
-        isAdmin: user.is_admin
+        isAdmin: user.is_admin,
+        regionId: user.region_id
       },
       token
     });
   } catch (error) {
-    console.error('❌ Registration error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      stack: error.stack
-    });
+    console.error('Registration failed', { code: error.code || 'unknown' });
     next(error);
   }
 });
@@ -222,7 +220,8 @@ router.post('/login', authLimiter, async (req, res, next) => {
         phone: user.phone,
         email: user.email,
         fullName: user.full_name,
-        isAdmin: user.is_admin
+        isAdmin: user.is_admin,
+        regionId: user.region_id
       },
       token
     });
@@ -255,7 +254,8 @@ router.get('/me', authenticateToken, async (req, res) => {
       phone: req.user.phone,
       email: req.user.email,
       fullName: req.user.full_name,
-      isAdmin: req.user.is_admin
+      isAdmin: req.user.is_admin,
+      regionId: req.user.region_id
     }
   });
 });
@@ -333,7 +333,7 @@ router.get('/yandex/callback', async (req, res, next) => {
     // Редирект на фронтенд с токеном
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
-    console.error('Yandex OAuth error:', error);
+    console.error('Yandex OAuth failed');
     res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
   }
 });

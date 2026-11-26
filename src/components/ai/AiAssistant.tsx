@@ -103,7 +103,7 @@ export function AiAssistant() {
             />
             <div>
               <h2 className="text-2xl font-bold text-[#262626]">Помощник Военкот бот</h2>
-              <p className="text-sm text-[#737373]">Задайте вопрос и получите помощь</p>
+              <p className="text-sm text-[#737373]">Задайте вопрос и получите общую справку по теме</p>
             </div>
           </div>
 
@@ -131,6 +131,7 @@ export function AiAssistant() {
             required
             disabled={loading}
           />
+          <p className="mt-2 text-xs leading-relaxed text-[#525252]">Внешний AI получает только общую тему вопроса и выбранный регион. Исходный текст и данные профиля ему не передаются; ваш вопрос остаётся в истории приложения. Не вводите ФИО, контакты и номера документов. Для пошагового маршрута используйте <a href="#navigator" className="font-semibold text-[#2c5f8d] underline">проводник</a>.</p>
         </div>
 
         {/* Примеры запросов */}

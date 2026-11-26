@@ -1,7 +1,9 @@
 import express from 'express';
 import axios from 'axios';
+import { randomUUID } from 'node:crypto';
 import { pool } from '../db/init.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { buildSafeAiQuestion } from '../aiPrivacy.js';
 
 const router = express.Router();
 
@@ -9,11 +11,10 @@ const router = express.Router();
 router.use(authenticateToken);
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'https://sergiologino-zettelkastenapp-ai-integration-bce3.twc1.net';
-let AI_API_KEY = process.env.AI_SERVICE_API_KEY;
+const AI_API_KEY = process.env.AI_SERVICE_API_KEY;
 
 // Получить или создать API ключ для клиентского приложения
-async function getOrCreateApiKey(userId) {
-  console.log('🔍 Checking AI_API_KEY:', AI_API_KEY ? '[SET]' : '[NOT SET]');
+async function getOrCreateApiKey() {
   
   // Проверяем есть ли уже сохраненный ключ в настройках пользователя
   // В реальности можно хранить это в отдельной таблице client_applications
@@ -23,7 +24,6 @@ async function getOrCreateApiKey(userId) {
     // Если ключа нет, нужно зарегистрировать клиентское приложение в AI сервисе
     // Для этого нужна авторизация в AI сервисе как пользователь
     // Пока используем переменную окружения
-    console.error('❌ AI Service API Key не настроен!');
     throw new Error('AI Service API Key не настроен. Обратитесь к администратору.');
   }
 
@@ -33,7 +33,7 @@ async function getOrCreateApiKey(userId) {
 // Получить доступные нейросети
 router.get('/networks', async (req, res, next) => {
   try {
-    const apiKey = await getOrCreateApiKey(req.user.id);
+    const apiKey = await getOrCreateApiKey();
 
     const response = await axios.get(`${AI_SERVICE_URL}/api/ai/networks/available`, {
       headers: {
@@ -43,56 +43,26 @@ router.get('/networks', async (req, res, next) => {
 
     res.json({ networks: response.data });
   } catch (error) {
-    console.error('AI networks error:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Ошибка при получении списка нейросетей',
-      details: error.response?.data || error.message
-    });
+    console.error('AI networks failed', { status: error.response?.status || 500 });
+    res.status(502).json({ error: 'Ошибка при получении списка нейросетей' });
   }
 });
 
 // Обработать запрос через две нейросети
 router.post('/process', async (req, res, next) => {
-  console.log('🤖 AI process request received');
-  console.log('User:', req.user ? `ID: ${req.user.id}` : 'NOT AUTHENTICATED');
-  console.log('Body:', { userQuery: req.body.userQuery?.substring(0, 50) + '...', regionName: req.body.regionName });
-  
   try {
-    const { userQuery, regionName } = req.body;
+    const { userQuery } = req.body;
 
     if (!userQuery || typeof userQuery !== 'string') {
-      console.log('❌ Validation failed: userQuery invalid');
       return res.status(400).json({ error: 'Запрос пользователя обязателен' });
     }
 
-    console.log('🔑 Getting API key...');
-    const apiKey = await getOrCreateApiKey(req.user.id);
-    console.log('✅ API key obtained');
-
-    // Получаем данные пользователя
-    console.log('👤 Fetching user data...');
-    const userResult = await pool.query(
-      'SELECT full_name, phone, email FROM users WHERE id = $1',
-      [req.user.id]
-    );
-    const user = userResult.rows[0] || {};
-    const userName = user.full_name || null;
-    console.log('✅ User data fetched:', { userName, phone: user.phone, email: user.email });
-    
-    // Определяем имя и отчество для обращения
-    let nameForAddress = '';
-    if (userName) {
-      const nameParts = userName.trim().split(/\s+/);
-      if (nameParts.length >= 2) {
-        // Берем имя и отчество
-        nameForAddress = `${nameParts[1]} ${nameParts[2] || ''}`.trim();
-      } else if (nameParts.length === 1) {
-        nameForAddress = nameParts[0];
-      }
-    }
+    const safeQuestion = buildSafeAiQuestion(userQuery);
+    const anonymousRequestId = randomUUID();
+    const regionName = ({ vladimir: 'Владимирская область', kaluga: 'Калужская область' })[req.user.region_id] || '';
+    const apiKey = await getOrCreateApiKey();
 
     // Получаем промпты из настроек админа
-    console.log('📋 Fetching admin settings...');
     const settingsResult = await pool.query(
       'SELECT key, value FROM admin_settings WHERE key IN ($1, $2)',
       ['primary_prompt', 'secondary_prompt']
@@ -105,7 +75,6 @@ router.post('/process', async (req, res, next) => {
 
     const primaryPrompt = settings.primary_prompt || 'Проанализируй следующий запрос пользователя и определи его тематику, категорию и основные вопросы.';
     const secondaryPromptBase = settings.secondary_prompt || 'На основе следующего анализа запроса пользователя, дай развернутый и точный ответ.';
-    console.log('✅ Admin settings fetched');
 
     // Получаем доступные нейросети и сортируем по приоритету
     const networksResponse = await axios.get(`${AI_SERVICE_URL}/api/ai/networks/available`, {
@@ -113,8 +82,6 @@ router.post('/process', async (req, res, next) => {
     });
 
     const networks = networksResponse.data || [];
-    console.log('✅ Networks fetched:', networks.length, 'networks available');
-    console.log('Available networks:', networks.map(n => `${n.name} (priority: ${n.priority})`).join(', '));
     
     // Сортируем по приоритету: БОЛЬШИЙ приоритет = выше в списке (обратная сортировка)
     // Приоритет 90 > Приоритет 1, поэтому 90 должен быть первым
@@ -129,11 +96,10 @@ router.post('/process', async (req, res, next) => {
       throw new Error('Не найдены доступные нейросети');
     }
 
-    console.log(`Используем сети: первая (приоритет ${firstNetwork.priority}) - ${firstNetwork.name}, вторая (приоритет ${secondNetwork.priority}) - ${secondNetwork.name}`);
 
     // Первый запрос - анализ запроса пользователя (в сеть с меньшим приоритетом, например 90)
     const primaryRequest = {
-      userId: req.user.id.toString(),
+      userId: anonymousRequestId,
       networkName: firstNetwork.name,
       requestType: 'chat',
       payload: {
@@ -144,13 +110,12 @@ router.post('/process', async (req, res, next) => {
           },
           {
             role: 'user',
-            content: userQuery
+            content: safeQuestion
           }
         ]
       }
     };
 
-    console.log(`Отправка первичного запроса в AI (сеть с приоритетом ${firstNetwork.priority})...`);
     const primaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       primaryRequest,
@@ -171,15 +136,11 @@ router.post('/process', async (req, res, next) => {
       || primaryResponse.data.response?.text 
       || JSON.stringify(primaryResponse.data.response);
 
-    // Формируем второй промпт с учетом региона и данных пользователя
+    // Формируем второй промпт без данных учётной записи и исходного вопроса.
     let secondaryPrompt = secondaryPromptBase;
     
     if (regionName) {
       secondaryPrompt += `\n\nВАЖНО: Пользователь находится в регионе: ${regionName}. Учитывай региональное законодательство и местные особенности при формировании ответа.`;
-    }
-    
-    if (nameForAddress) {
-      secondaryPrompt += `\n\nОбращайся к пользователю по имени-отчеству: ${nameForAddress}.`;
     }
     
     secondaryPrompt += `\n\nТребования к ответу:
@@ -214,7 +175,7 @@ router.post('/process', async (req, res, next) => {
 
     // Второй запрос - развернутый ответ на основе анализа (в сеть с большим приоритетом, например 100)
     const secondaryRequest = {
-      userId: req.user.id.toString(),
+      userId: anonymousRequestId,
       networkName: secondNetwork.name,
       requestType: 'chat',
       payload: {
@@ -225,13 +186,12 @@ router.post('/process', async (req, res, next) => {
           },
           {
             role: 'user',
-            content: `Анализ запроса: ${primaryAnalysis}\n\nИсходный запрос пользователя: ${userQuery}`
+            content: `Анализ общего вопроса: ${primaryAnalysis}\n\nОбщий вопрос: ${safeQuestion}`
           }
         ]
       }
     };
 
-    console.log(`Отправка вторичного запроса в AI (сеть с приоритетом ${secondNetwork.priority})...`);
     const secondaryResponse = await axios.post(
       `${AI_SERVICE_URL}/api/ai/process`,
       secondaryRequest,
@@ -340,7 +300,7 @@ router.post('/process', async (req, res, next) => {
         req.user.id,
         userQuery,
         primaryAnalysis,
-        `${secondaryPrompt}\n\nАнализ: ${primaryAnalysis}\n\nЗапрос: ${userQuery}`,
+        `${secondaryPrompt}\n\nАнализ: ${primaryAnalysis}\n\nОбщий вопрос: ${safeQuestion}`,
         fullAnswer,
         `${firstNetwork.name} -> ${secondNetwork.name}`,
         (primaryResponse.data.tokensUsed || 0) + (secondaryResponse.data.tokensUsed || 0),
@@ -358,25 +318,14 @@ router.post('/process', async (req, res, next) => {
       executionTimeMs: (primaryResponse.data.executionTimeMs || 0) + (secondaryResponse.data.executionTimeMs || 0)
     });
   } catch (error) {
-    console.error('❌ AI process error:', error.message);
-    console.error('Error details:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      stack: error.stack
-    });
-    
-    res.status(error.response?.status || 500).json({
-      error: 'Ошибка при обработке запроса',
-      details: process.env.NODE_ENV === 'production' ? error.message : error.response?.data || error.message
-    });
+    console.error('AI process failed', { status: error.response?.status || 500 });
+    res.status(502).json({ error: 'Ошибка при обработке запроса' });
   }
 });
 
 // Получить историю AI запросов пользователя
 router.get('/history', async (req, res, next) => {
   try {
-    console.log('📋 AI History requested by user:', req.user?.id);
     const { limit = 20, offset = 0 } = req.query;
 
     const result = await pool.query(
@@ -394,7 +343,6 @@ router.get('/history', async (req, res, next) => {
       [req.user.id]
     );
 
-    console.log(`✅ Found ${result.rows.length} AI requests for user ${req.user.id}`);
 
     res.json({
       requests: result.rows,
@@ -403,7 +351,7 @@ router.get('/history', async (req, res, next) => {
       offset: parseInt(offset)
     });
   } catch (error) {
-    console.error('❌ Error fetching AI history:', error);
+    console.error('AI history failed');
     next(error);
   }
 });

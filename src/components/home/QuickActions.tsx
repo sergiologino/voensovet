@@ -1,6 +1,5 @@
-import React from 'react';
 import { Card } from '../ui/Card';
-import { ScaleIcon, HeartIcon, AlertCircleIcon, BuildingIcon } from 'lucide-react';
+import { ScaleIcon, HeartIcon, AlertCircleIcon, RouteIcon } from 'lucide-react';
 
 export function QuickActions() {
   const actions = [
@@ -23,10 +22,10 @@ export function QuickActions() {
       href: '#complaints',
     },
     {
-      icon: BuildingIcon,
-      title: 'Посмотреть контакты организаций',
-      description: 'Каталог государственных и общественных организаций',
-      href: '#organizations',
+      icon: RouteIcon,
+      title: 'Открыть проводник',
+      description: 'Выберите задачу и посмотрите путь по шагам',
+      href: '#navigator',
     },
   ];
   return <section className="py-16 lg:py-20">

@@ -119,6 +119,7 @@ export function VeteranPage() {
               Вы выполнили свой долг перед Родиной. Теперь мы готовы помочь вам вернуться 
               к мирной жизни. Здесь вы найдёте информацию о ваших правах, льготах и программах поддержки.
             </p>
+            <a href="#navigator" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#2c5f8d] px-6 py-3 font-semibold text-white hover:bg-[#1e4976]">Открыть проводник <ArrowRightIcon size={18} /></a>
           </div>
 
           {/* Urgent Help Alert */}

@@ -7,13 +7,14 @@ interface User {
   email?: string;
   fullName?: string;
   isAdmin: boolean;
+  regionId?: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (phone: string, password: string, captcha: string) => Promise<void>;
-  register: (phone: string, password: string, fullName?: string, captcha?: string) => Promise<void>;
+  register: (phone: string, password: string, fullName?: string, captcha?: string, regionId?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -54,8 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (phone: string, password: string, fullName?: string, captcha?: string) => {
-    const data = await api.register(phone, password, fullName, captcha);
+  const register = async (phone: string, password: string, fullName?: string, captcha?: string, regionId?: string) => {
+    const data = await api.register(phone, password, fullName, captcha, regionId);
     localStorage.setItem('token', data.token);
     setUser(data.user);
   };

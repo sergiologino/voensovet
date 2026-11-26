@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../context/AuthContext';
+import { useRegionContext } from '../../context/RegionContext';
 import { Alert } from '../ui/Alert';
 import { XIcon, Phone, Mail } from 'lucide-react';
 import InputMask from 'react-input-mask';
@@ -13,6 +14,7 @@ interface RegisterProps {
 
 export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
   const { register } = useAuth();
+  const { region, openSelector } = useRegionContext();
   const [contactType, setContactType] = useState<'phone' | 'email'>('phone');
   const [phone, setPhone] = useState('+7 ');
   const [email, setEmail] = useState('');
@@ -43,6 +45,11 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!region) {
+      setError('Выберите регион проживания');
+      return;
+    }
 
     // Валидация контакта
     if (contactType === 'phone') {
@@ -81,7 +88,7 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
     setLoading(true);
     try {
       const contact = contactType === 'phone' ? phone : email;
-      await register(contact, password, fullName || undefined, captcha);
+      await register(contact, password, fullName || undefined, captcha, region?.id);
       onClose?.();
     } catch (err: any) {
       setError(err.message || 'Ошибка регистрации');
@@ -97,7 +104,7 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 relative">
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-lg sm:p-8">
         {onClose && (
           <button
             onClick={onClose}
@@ -112,6 +119,7 @@ export function Register({ onClose, onSwitchToLogin }: RegisterProps) {
         {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div><p className="text-sm font-medium text-[#404040]">Регион проживания *</p><button type="button" onClick={openSelector} className="mt-2 min-h-12 w-full rounded-xl border-2 border-[#d4d4d4] px-4 text-left text-[#262626]">{region?.name || 'Выберите регион'}</button></div>
           {/* Выбор типа контакта */}
           <div>
             <label className="block text-sm font-medium text-[#404040] mb-2">

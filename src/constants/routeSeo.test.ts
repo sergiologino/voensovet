@@ -8,6 +8,7 @@ const REQUIRED_PAGE_KEYS = [
   'help',
   'contract-service',
   'veteran',
+  'navigator',
   'family',
   'bereaved',
   'benefits',
@@ -29,7 +30,7 @@ describe('SEO_BY_PAGE', () => {
       expect(meta!.keywords.length).toBeGreaterThan(5);
       expect(meta!.hash).toBe(key);
       if (meta!.noindex) {
-        expect(['profile', 'admin', 'auth-callback']).toContain(key);
+        expect(['profile', 'admin', 'auth-callback', 'navigator']).toContain(key);
       }
     }
   });
