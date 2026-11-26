@@ -1,4 +1,6 @@
-export type NavigatorTopic = 'work' | 'business' | 'education' | 'house' | 'housing' | 'payments';
+import type { BenefitMeasure } from '../api/client';
+
+export type NavigatorTopic = 'work' | 'business' | 'education' | 'health' | 'house' | 'housing' | 'payments';
 export type NavigatorAudience = 'veteran' | 'status-pending' | 'family' | 'bereaved-family';
 
 export const NAVIGATOR_AUDIENCES: { id: NavigatorAudience; title: string }[] = [
@@ -16,7 +18,7 @@ export interface NavigatorStep {
 export interface NavigatorCard {
   id: string;
   topic: NavigatorTopic;
-  regionId: 'all' | 'vladimir' | 'kaluga';
+  regionId: string;
   title: string;
   purpose: string;
   steps: NavigatorStep[];
@@ -159,6 +161,17 @@ export function getNavigatorCards(topic: NavigatorTopic, regionId: string | null
   return NAVIGATOR_CARDS.filter((card) => card.topic === topic && (card.regionId === 'all' || card.regionId === regionId) && (!card.audiences || card.audiences.includes(audience)));
 }
 
+export function getCatalogCards(measures: BenefitMeasure[], topic: NavigatorTopic, audience: NavigatorAudience): NavigatorCard[] {
+  return measures.filter((measure) => measure.topic === topic && measure.audiences.includes(audience)).map((measure) => ({
+    id: String(measure.id), topic: measure.topic, regionId: measure.region_id || 'all',
+    title: measure.title, purpose: measure.summary, steps: measure.steps,
+    audiences: measure.audiences as NavigatorAudience[], eligibility: measure.eligibility,
+    documents: measure.documents.join('; '), where: measure.agency,
+    timing: measure.timing, important: measure.exclusions || 'Проверьте условия перед обращением.',
+    source: { label: 'официальная страница меры', url: measure.source_url, checkedAt: measure.source_checked_at?.slice(0, 10) || '' },
+  }));
+}
+
 export function inferNavigatorTopic(query: string): NavigatorTopic | null {
   const text = query.toLocaleLowerCase('ru').trim();
   if (!text) return null;
@@ -166,6 +179,7 @@ export function inferNavigatorTopic(query: string): NavigatorTopic | null {
   if (/(стро|постро|построй).*дом|дом.*(стро|постро|построй)|свой дом|своего дома|земельн|участок|участка|субсиди.*дом/.test(text)) return 'house';
   if (/работ|ваканс|трудоустр|карьер|резюме/.test(text)) return 'work';
   if (/уч[её]б|обуч|професси|курс|переобуч/.test(text)) return 'education';
+  if (/реабилитац|лечени|здоров|протез|санатори|техническ.*средств/.test(text)) return 'health';
   if (/жиль|квартир|переез|переех|ипотек|субсиди/.test(text)) return 'housing';
   if (/выплат|пособ|ден[её]г|компенсац/.test(text)) return 'payments';
   return null;

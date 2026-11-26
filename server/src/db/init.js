@@ -1,4 +1,6 @@
 import pg from 'pg';
+import { INITIAL_MEASURES } from '../data/initialMeasures.js';
+import { normalizeMeasure } from '../measures.js';
 
 const { Pool } = pg;
 
@@ -291,6 +293,7 @@ async function createTables() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS benefit_measures (
       id BIGSERIAL PRIMARY KEY,
+      source_key TEXT UNIQUE,
       title TEXT NOT NULL,
       topic VARCHAR(30) NOT NULL,
       scope VARCHAR(10) NOT NULL CHECK (scope IN ('federal', 'regional')),
@@ -307,6 +310,7 @@ async function createTables() {
       timing TEXT NOT NULL DEFAULT '',
       source_url TEXT NOT NULL DEFAULT '',
       source_checked_at DATE,
+      date_end DATE,
       status VARCHAR(10) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
       updated_by INTEGER REFERENCES users(id),
       reviewed_by INTEGER REFERENCES users(id),
@@ -320,10 +324,31 @@ async function createTables() {
     )
   `);
   await pool.query("ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS locality TEXT NOT NULL DEFAULT ''");
+  await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS date_end DATE');
+  await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS source_key TEXT');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_benefit_measures_source_key ON benefit_measures (source_key)');
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_benefit_measures_public
     ON benefit_measures (status, region_id, topic)
   `);
+  for (const initial of INITIAL_MEASURES) {
+    const { measure, error } = normalizeMeasure(initial);
+    const publicationCheck = normalizeMeasure({ ...initial, date_end: null }, true);
+    if (error || publicationCheck.error) throw new Error(`Invalid initial measure ${initial.source_key}: ${error || publicationCheck.error}`);
+    await pool.query(
+      `INSERT INTO benefit_measures
+       (source_key, title, topic, scope, region_id, locality, audiences, summary, eligibility,
+        exclusions, documents, steps, agency, apply_url, timing, source_url, source_checked_at,
+        date_end, status, published_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'published',NOW())
+       ON CONFLICT (source_key) DO NOTHING`,
+      [initial.source_key, measure.title, measure.topic, measure.scope, measure.region_id,
+        measure.locality, JSON.stringify(measure.audiences), measure.summary, measure.eligibility,
+        measure.exclusions, JSON.stringify(measure.documents), JSON.stringify(measure.steps),
+        measure.agency, measure.apply_url, measure.timing, measure.source_url,
+        measure.source_checked_at, measure.date_end]
+    );
+  }
   console.log('🎉 All tables and migrations completed successfully!');
 }
 

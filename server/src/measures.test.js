@@ -28,4 +28,9 @@ describe('benefit measure validation', () => {
     const complete = { ...draft, audiences: ['veteran'], summary: 'Описание', eligibility: 'Условия', documents: ['Заявление'], steps: [{ title: 'Подать', detail: 'В ведомство' }], agency: 'Соцзащита', timing: '10 дней', source_url: 'https://example.test', source_checked_at: new Date('2026-11-26T00:00:00.000Z') };
     expect(normalizeMeasure(complete, true).measure.source_checked_at).toBe('2026-11-26');
   });
+
+  it('does not publish a measure whose end date has passed', () => {
+    const complete = { ...draft, audiences: ['veteran'], summary: 'Описание', eligibility: 'Условия', documents: ['Заявление'], steps: [{ title: 'Подать', detail: 'В ведомство' }], agency: 'Соцзащита', timing: '10 дней', source_url: 'https://example.test', source_checked_at: '2026-11-26', date_end: '2020-01-01' };
+    expect(normalizeMeasure(complete, true).error).toContain('истёкшим сроком');
+  });
 });

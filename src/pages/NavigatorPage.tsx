@@ -1,14 +1,16 @@
-import { useState } from 'react';
-import { ArrowRight, Briefcase, GraduationCap, Hammer, House, MapPin, Search, Store, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Briefcase, GraduationCap, Hammer, HeartPulse, House, MapPin, Search, Store, Wallet } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { useRegionContext } from '../context/RegionContext';
-import { getNavigatorCards, inferNavigatorTopic, NavigatorAudience, NavigatorTopic, NAVIGATOR_AUDIENCES, PILOT_REGIONS } from '../data/navigator';
+import { api, BenefitMeasure } from '../api/client';
+import { getCatalogCards, getNavigatorCards, inferNavigatorTopic, NavigatorAudience, NavigatorTopic, NAVIGATOR_AUDIENCES, PILOT_REGIONS } from '../data/navigator';
 
 const topics = [
   { id: 'work', title: 'Работа', icon: Briefcase },
   { id: 'business', title: 'Своё дело', icon: Store },
   { id: 'education', title: 'Обучение', icon: GraduationCap },
+  { id: 'health', title: 'Здоровье', icon: HeartPulse },
   { id: 'house', title: 'Свой дом', icon: Hammer },
   { id: 'housing', title: 'Жильё и переезд', icon: House },
   { id: 'payments', title: 'Выплаты', icon: Wallet },
@@ -20,7 +22,23 @@ export function NavigatorPage() {
   const [topic, setTopic] = useState<NavigatorTopic>('work');
   const [audience, setAudience] = useState<NavigatorAudience>('veteran');
   const [notice, setNotice] = useState('');
-  const cards = getNavigatorCards(topic, region?.id ?? null, audience);
+  const [locality, setLocality] = useState('');
+  const [catalog, setCatalog] = useState<BenefitMeasure[] | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  useEffect(() => { setLocality(''); }, [region?.id]);
+  useEffect(() => {
+    let active = true;
+    setCatalogLoading(true);
+    api.getPublishedMeasures(region?.id ?? null, locality).then((result) => {
+      if (active) setCatalog(result.measures);
+    }).catch(() => {
+      if (active) setCatalog(null);
+    }).finally(() => {
+      if (active) setCatalogLoading(false);
+    });
+    return () => { active = false; };
+  }, [region?.id, locality]);
+  const cards = catalog ? getCatalogCards(catalog, topic, audience) : getNavigatorCards(topic, region?.id ?? null, audience).filter((card) => !card.source);
   const isPilotRegion = region && PILOT_REGIONS.some((id) => id === region.id);
 
   const submitQuery = (event: React.FormEvent) => {
@@ -53,6 +71,7 @@ export function NavigatorPage() {
             <p className="text-sm font-semibold text-[#525252]">Ваш регион</p>
             <p className="mt-2 flex items-center gap-2 text-lg font-bold"><MapPin size={20} className="text-[#2c5f8d]" />{region?.name ?? 'Не выбран'}</p>
             <button type="button" onClick={openSelector} className="mt-3 text-sm font-semibold text-[#2c5f8d] underline underline-offset-4">Изменить регион</button>
+            {region?.id === 'kaluga' && <label className="mt-4 flex items-start gap-3 border-t border-[#e5e5e5] pt-4 text-sm"><input type="checkbox" checked={locality === 'Калуга'} onChange={(event) => setLocality(event.target.checked ? 'Калуга' : '')} className="mt-0.5 h-5 w-5 accent-[#2c5f8d]" /><span>Показать также меры города Калуги. Право зависит от условий конкретной карточки.</span></label>}
           </div>
         </div>
 
@@ -77,7 +96,7 @@ export function NavigatorPage() {
 
         <section className="mt-10" aria-labelledby="navigator-topics-title">
           <h2 id="navigator-topics-title" className="text-2xl font-bold">Или выберите направление</h2>
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
             {topics.map((item) => {
               const Icon = item.icon;
               return <button type="button" key={item.id} onClick={() => { setTopic(item.id); setNotice(''); }} aria-pressed={topic === item.id} className={`flex min-h-28 flex-col items-start justify-between rounded-2xl border p-4 text-left font-semibold transition-colors focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[#2c5f8d] ${topic === item.id ? 'border-[#2c5f8d] bg-[#e7eff6] text-[#163859]' : 'border-[#d4d4d4] bg-white hover:border-[#2c5f8d]'}`}><Icon size={26} /><span>{item.title}</span></button>;
@@ -91,9 +110,10 @@ export function NavigatorPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-[#2c5f8d]">Ваш путь</p>
               <h2 id="navigator-path-title" className="mt-1 text-2xl font-bold">{topics.find((item) => item.id === topic)?.title}: возможные пути</h2>
             </div>
-            <span className="text-sm text-[#737373]">Карточек: {cards.length}</span>
+            <span className="text-sm text-[#737373]">{catalogLoading ? 'Загружаем меры…' : `Карточек: ${cards.length}`}</span>
           </div>
           {!isPilotRegion && <p className="mt-5 rounded-xl border border-[#d9e6f2] bg-[#f0f4f8] p-4 text-sm text-[#404040]">Региональные сценарии прототипа сейчас показаны только для Владимирской и Калужской областей. Выберите один из этих регионов, чтобы увидеть пример.</p>}
+          {!catalogLoading && catalog === null && <p className="mt-5 rounded-xl border border-[#eedab0] bg-[#fffbeb] p-4 text-sm text-[#5c470f]">Каталог сервера сейчас недоступен. Показаны только демонстрационные сценарии без действующих мер.</p>}
           {cards.length === 0 && <p className="mt-5 rounded-xl border border-[#d9e6f2] bg-white p-5 text-sm text-[#404040]">Для этой группы и темы карточки ещё не добавлены. Это не означает отсутствия права на поддержку — каталог пока наполняется.</p>}
           <div className="mt-5 grid gap-5 lg:grid-cols-2">
             {cards.map((card) => <article key={card.id} className="rounded-2xl border border-[#e5e5e5] bg-white p-5 shadow-sm sm:p-6">
@@ -117,7 +137,7 @@ export function NavigatorPage() {
         </section>
 
         <aside className="mt-10 rounded-2xl border border-[#eedab0] bg-[#fffbeb] p-5 text-sm leading-relaxed text-[#5c470f]">
-          <strong>Проводник в разработке.</strong> Карточки со ссылкой на официальный источник содержат сведения из него; остальные показывают только пример интерфейса. Выбор группы и темы не подтверждает право на выплату. Текст вопроса обрабатывается только в браузере и никуда не отправляется.
+          <strong>Проводник в разработке.</strong> Карточки со ссылкой на официальный источник содержат сведения из него; демонстрационные сценарии показывают только пример интерфейса. Выбор группы и темы не подтверждает право на меру. Текст вопроса обрабатывается только в браузере и никуда не отправляется.
         </aside>
       </main>
       <Footer />

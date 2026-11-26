@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 export interface BenefitMeasure {
   id: number;
   title: string;
-  topic: 'work' | 'business' | 'education' | 'house' | 'housing' | 'payments';
+  topic: 'work' | 'business' | 'education' | 'health' | 'house' | 'housing' | 'payments';
   scope: 'federal' | 'regional';
   region_id: string | null;
   locality: string;
@@ -20,7 +20,9 @@ export interface BenefitMeasure {
   timing: string;
   source_url: string;
   source_checked_at: string | null;
+  date_end: string | null;
   status: 'draft' | 'published';
+  created_at?: string;
   updated_at?: string;
 }
 
@@ -161,8 +163,10 @@ export const api = {
     );
   },
 
-  async getAdminMeasures() {
-    return request<{ measures: BenefitMeasure[] }>('/api/admin/measures');
+  async getAdminMeasures(filters: { status?: string; scope?: string; regionId?: string; topic?: string; search?: string; validity?: string } = {}) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return request<{ measures: BenefitMeasure[] }>(`/api/admin/measures${params.size ? `?${params}` : ''}`);
   },
 
   async createAdminMeasure(measure: BenefitMeasureInput) {

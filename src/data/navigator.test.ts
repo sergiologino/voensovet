@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getNavigatorCards, inferNavigatorTopic, NAVIGATOR_AUDIENCES } from './navigator';
+import { getCatalogCards, getNavigatorCards, inferNavigatorTopic, NAVIGATOR_AUDIENCES } from './navigator';
+import type { BenefitMeasure } from '../api/client';
 
 describe('navigator demo routing', () => {
   it('includes applicants and both family groups in the first-release audience', () => {
@@ -32,6 +33,7 @@ describe('navigator demo routing', () => {
   it('maps a plain-language request to a supported topic', () => {
     expect(inferNavigatorTopic('Хочу найти подходящую работу')).toBe('work');
     expect(inferNavigatorTopic('Нужно переобучение')).toBe('education');
+    expect(inferNavigatorTopic('Нужна реабилитация')).toBe('health');
     expect(inferNavigatorTopic('Хочу переехать')).toBe('housing');
     expect(inferNavigatorTopic('Какие выплаты?')).toBe('payments');
     expect(inferNavigatorTopic('Хочу построить свой дом')).toBe('house');
@@ -40,5 +42,12 @@ describe('navigator demo routing', () => {
     expect(inferNavigatorTopic('Хочу открыть своё дело')).toBe('business');
     expect(inferNavigatorTopic('Нужны деньги на бизнес')).toBe('business');
     expect(inferNavigatorTopic('Помогите')).toBeNull();
+  });
+
+  it('shows a published catalog card only to its declared audience and topic', () => {
+    const measure = { id: 1, title: 'Лечение', topic: 'health', region_id: null, audiences: ['veteran'], summary: 'Описание', steps: [{ title: 'Обратиться', detail: 'В СФР' }], eligibility: 'Условия', documents: ['Заявление'], agency: 'СФР', timing: '2 дня', exclusions: '', source_url: 'https://sfr.gov.ru/', source_checked_at: '2026-11-26' } as BenefitMeasure;
+    expect(getCatalogCards([measure], 'health', 'veteran')).toHaveLength(1);
+    expect(getCatalogCards([measure], 'health', 'family')).toEqual([]);
+    expect(getCatalogCards([measure], 'work', 'veteran')).toEqual([]);
   });
 });

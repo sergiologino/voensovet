@@ -1,4 +1,4 @@
-export const MEASURE_TOPICS = ['work', 'business', 'education', 'house', 'housing', 'payments'];
+export const MEASURE_TOPICS = ['work', 'business', 'education', 'health', 'house', 'housing', 'payments'];
 export const MEASURE_AUDIENCES = ['veteran', 'status-pending', 'family', 'bereaved-family'];
 
 const clean = (value) => typeof value === 'string' ? value.trim() : '';
@@ -24,6 +24,7 @@ export function normalizeMeasure(input, forPublication = false) {
     timing: clean(input?.timing),
     source_url: clean(input?.source_url),
     source_checked_at: cleanDate(input?.source_checked_at) || null,
+    date_end: cleanDate(input?.date_end) || null,
   };
 
   if (!measure.title || measure.title.length > 200) return { error: 'Укажите название меры до 200 символов' };
@@ -40,6 +41,8 @@ export function normalizeMeasure(input, forPublication = false) {
   measure.steps = measure.steps.map((item) => ({ title: clean(item.title), detail: clean(item.detail) }));
   if (!validUrl(measure.source_url) || !validUrl(measure.apply_url)) return { error: 'Ссылки должны начинаться с https://' };
   if (!validDate(measure.source_checked_at)) return { error: 'Укажите дату проверки в формате ГГГГ-ММ-ДД' };
+  if (!validDate(measure.date_end)) return { error: 'Укажите дату окончания в формате ГГГГ-ММ-ДД' };
+  if (forPublication && measure.date_end && measure.date_end < new Date().toISOString().slice(0, 10)) return { error: 'Мера с истёкшим сроком не может быть опубликована' };
   if (forPublication && (!measure.summary || !measure.eligibility || !measure.audiences.length || !measure.documents.length || !measure.steps.length || !measure.agency || !measure.timing || !measure.source_url || !measure.source_checked_at)) {
     return { error: 'Для публикации заполните описание, условия, группы, документы, шаги, ведомство, сроки, источник и дату проверки' };
   }

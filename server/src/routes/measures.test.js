@@ -32,7 +32,7 @@ query.mockImplementation(async (sql, values = []) => {
     return { rows: [row] };
   }
   if (sql.startsWith('SELECT * FROM benefit_measures')) return { rows: state.rows };
-  if (sql.includes("WHERE status = 'published'")) return { rows: state.rows.filter((row) => row.status === 'published' && (row.scope === 'federal' || row.region_id === values[0]) && (!row.locality || row.locality === values[1])) };
+  if (sql.includes("WHERE status = 'published'")) return { rows: state.rows.filter((row) => row.status === 'published' && (row.scope === 'federal' || row.region_id === values[0]) && (!row.locality || row.locality === values[1]) && (!row.date_end || row.date_end >= new Date().toISOString().slice(0, 10))) };
   return { rows: [] };
 });
 
@@ -63,7 +63,7 @@ afterAll(async () => {
 });
 
 const measure = {
-  title: 'Помощь с домом', topic: 'house', scope: 'regional', region_id: 'vladimir', locality: 'Владимир',
+  title: 'Помощь с домом', topic: 'house', scope: 'regional', region_id: 'vladimir', locality: 'Владимир', date_end: null,
   audiences: ['veteran'], summary: 'Краткое описание', eligibility: 'Условия', exclusions: '',
   documents: ['Заявление'], steps: [{ title: 'Подать заявление', detail: 'В соцзащиту' }],
   agency: 'Соцзащита', apply_url: '', timing: '10 дней',
@@ -111,5 +111,15 @@ describe('measure catalog API', () => {
     expect((await edited.json()).measure.status).toBe('draft');
     const hiddenAgain = await fetch(`${baseUrl}/api/measures?regionId=vladimir&locality=${encodeURIComponent('Владимир')}`);
     expect((await hiddenAgain.json()).measures).toEqual([]);
+
+    state.rows[0].status = 'published';
+    state.rows[0].date_end = '2020-01-01';
+    const expired = await fetch(`${baseUrl}/api/measures?regionId=vladimir&locality=${encodeURIComponent('Владимир')}`);
+    expect((await expired.json()).measures).toEqual([]);
+    expect(query.mock.calls.find(([sql]) => sql.includes("WHERE status = 'published'"))?.[0]).toContain('date_end >= CURRENT_DATE');
+
+    await fetch(`${baseUrl}/api/admin/measures?status=published&regionId=vladimir&topic=house&validity=expired&search=${encodeURIComponent('дом')}`, { headers: { 'x-test-admin': 'yes' } });
+    expect(query.mock.calls.at(-1)?.[0]).toContain('date_end < CURRENT_DATE');
+    expect(query.mock.calls.at(-1)?.[1]).toEqual(['published', 'vladimir', 'house', '%дом%']);
   });
 });
