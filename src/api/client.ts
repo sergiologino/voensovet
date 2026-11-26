@@ -10,6 +10,7 @@ export interface BenefitMeasure {
   region_id: string | null;
   locality: string;
   audiences: string[];
+  match_rules: MatchRules;
   summary: string;
   eligibility: string;
   exclusions: string;
@@ -25,6 +26,25 @@ export interface BenefitMeasure {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface MatchRules {
+  family_relationship?: 'spouse' | 'parent' | 'child' | 'other';
+  participant_disability?: ('I' | 'II' | 'III')[];
+  min_children?: number;
+  housing?: NavigatorProfile['housing'];
+  requires_award?: boolean;
+  requires_veteran_card?: boolean;
+}
+
+export interface NavigatorProfile {
+  audience: 'veteran' | 'status-pending' | 'family' | 'bereaved-family';
+  disability: 'none' | 'I' | 'II' | 'III' | 'unknown';
+  relationship: 'spouse' | 'parent' | 'child' | 'other' | 'none';
+  children_count: number;
+  housing: 'own-home' | 'own-flat' | 'rent' | 'with-family' | 'other';
+}
+
+export interface NavigatorMatch { measure: BenefitMeasure; reasons: string[]; checks: string[] }
 
 export type BenefitMeasureInput = Omit<BenefitMeasure, 'id' | 'status' | 'updated_at'>;
 
@@ -190,6 +210,20 @@ export const api = {
     if (regionId) params.set('regionId', regionId);
     if (locality) params.set('locality', locality);
     return request<{ measures: BenefitMeasure[] }>(`/api/measures${params.size ? `?${params}` : ''}`);
+  },
+
+  async getNavigatorProfile() {
+    return request<{ profile: NavigatorProfile | null }>('/api/navigator/profile');
+  },
+
+  async saveNavigatorProfile(profile: NavigatorProfile) {
+    return request<{ profile: NavigatorProfile }>('/api/navigator/profile', { method: 'PUT', body: JSON.stringify(profile) });
+  },
+
+  async getNavigatorMatches(topic: string, locality = '') {
+    const params = new URLSearchParams({ topic });
+    if (locality) params.set('locality', locality);
+    return request<{ matches: NavigatorMatch[] }>(`/api/navigator/matches?${params}`);
   },
 
   // Get user's own AI requests

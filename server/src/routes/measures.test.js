@@ -2,12 +2,12 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 
 const state = vi.hoisted(() => ({ rows: [], nextId: 1 }));
-const fields = ['title', 'topic', 'scope', 'region_id', 'locality', 'audiences', 'summary', 'eligibility', 'exclusions', 'documents', 'steps', 'agency', 'apply_url', 'timing', 'source_url', 'source_checked_at'];
+const fields = ['title', 'topic', 'scope', 'region_id', 'locality', 'audiences', 'match_rules', 'summary', 'eligibility', 'exclusions', 'documents', 'steps', 'agency', 'apply_url', 'timing', 'source_url', 'source_checked_at', 'date_end'];
 const query = vi.hoisted(() => vi.fn());
 
 query.mockImplementation(async (sql, values = []) => {
   if (sql.startsWith('INSERT INTO benefit_measures')) {
-    const row = Object.fromEntries(fields.map((field, index) => [field, ['audiences', 'documents', 'steps'].includes(field) ? JSON.parse(values[index]) : values[index]]));
+    const row = Object.fromEntries(fields.map((field, index) => [field, ['audiences', 'match_rules', 'documents', 'steps'].includes(field) ? JSON.parse(values[index]) : values[index]]));
     row.id = state.nextId++;
     row.status = 'draft';
     state.rows.push(row);
@@ -22,7 +22,7 @@ query.mockImplementation(async (sql, values = []) => {
   if (sql.startsWith('UPDATE benefit_measures SET title')) {
     const row = state.rows.find((item) => item.id === Number(values[values.length - 1]));
     if (!row) return { rows: [] };
-    fields.forEach((field, index) => { row[field] = ['audiences', 'documents', 'steps'].includes(field) ? JSON.parse(values[index]) : values[index]; });
+    fields.forEach((field, index) => { row[field] = ['audiences', 'match_rules', 'documents', 'steps'].includes(field) ? JSON.parse(values[index]) : values[index]; });
     row.status = 'draft';
     return { rows: [row] };
   }

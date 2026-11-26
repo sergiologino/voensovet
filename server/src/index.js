@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import regionRoutes from './routes/regions.js';
 import { publicMeasuresRouter } from './routes/measures.js';
+import { navigatorRouter } from './routes/navigator.js';
 
 // Проверка обязательных переменных окружения
 const requiredEnvVars = ['JWT_SECRET'];
@@ -50,6 +51,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/regions', regionRoutes);
 app.use('/api/measures', publicMeasuresRouter);
+app.use('/api/navigator', navigatorRouter);
 
 // Error handler
 app.use((err, req, res, next) => {

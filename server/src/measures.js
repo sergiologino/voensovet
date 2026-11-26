@@ -14,6 +14,7 @@ export function normalizeMeasure(input, forPublication = false) {
     region_id: clean(input?.region_id) || null,
     locality: clean(input?.locality),
     audiences: input?.audiences,
+    match_rules: input?.match_rules || {},
     summary: clean(input?.summary),
     eligibility: clean(input?.eligibility),
     exclusions: clean(input?.exclusions),
@@ -35,6 +36,13 @@ export function normalizeMeasure(input, forPublication = false) {
   if (measure.locality.length > 100) return { error: 'Название населённого пункта слишком длинное' };
   if (!Array.isArray(measure.audiences) || !measure.audiences.every((item) => MEASURE_AUDIENCES.includes(item))) return { error: 'Проверьте целевые группы' };
   measure.audiences = [...new Set(measure.audiences)];
+  const rules = measure.match_rules;
+  if (!rules || Array.isArray(rules) || typeof rules !== 'object' || Object.keys(rules).some((key) => !['family_relationship', 'participant_disability', 'min_children', 'housing', 'requires_award', 'requires_veteran_card'].includes(key))) return { error: 'Проверьте правила подбора' };
+  if (rules.family_relationship !== undefined && !['spouse', 'parent', 'child', 'other'].includes(rules.family_relationship)) return { error: 'Проверьте родство в правилах подбора' };
+  if (rules.participant_disability !== undefined && (!Array.isArray(rules.participant_disability) || !rules.participant_disability.length || !rules.participant_disability.every((item) => ['I', 'II', 'III'].includes(item)))) return { error: 'Проверьте группу инвалидности в правилах подбора' };
+  if (rules.min_children !== undefined && (!Number.isInteger(rules.min_children) || rules.min_children < 1 || rules.min_children > 30)) return { error: 'Проверьте число детей в правилах подбора' };
+  if (rules.housing !== undefined && !['own-home', 'own-flat', 'rent', 'with-family', 'other'].includes(rules.housing)) return { error: 'Проверьте жильё в правилах подбора' };
+  if (['requires_award', 'requires_veteran_card'].some((key) => rules[key] !== undefined && typeof rules[key] !== 'boolean')) return { error: 'Проверьте дополнительные условия подбора' };
   if (!Array.isArray(measure.documents) || !measure.documents.every((item) => typeof item === 'string' && item.trim())) return { error: 'Проверьте список документов' };
   measure.documents = measure.documents.map((item) => item.trim());
   if (!Array.isArray(measure.steps) || !measure.steps.every((item) => item && clean(item.title) && clean(item.detail))) return { error: 'Проверьте шаги обращения' };

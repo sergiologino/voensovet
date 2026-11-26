@@ -13,6 +13,7 @@ const AUDIENCES = [
 
 const emptyMeasure = (): BenefitMeasureInput => ({
   title: '', topic: 'payments', scope: 'federal', region_id: null, locality: '', audiences: [],
+  match_rules: {},
   summary: '', eligibility: '', exclusions: '', documents: [], steps: [{ title: '', detail: '' }],
   agency: '', apply_url: '', timing: '', source_url: '', source_checked_at: null, date_end: null,
 });
@@ -45,6 +46,7 @@ export function MeasureEditor() {
     setForm({
       title: measure.title, topic: measure.topic, scope: measure.scope, region_id: measure.region_id, locality: measure.locality,
       audiences: [...measure.audiences], summary: measure.summary, eligibility: measure.eligibility,
+      match_rules: { ...measure.match_rules },
       exclusions: measure.exclusions, documents: [...measure.documents],
       steps: measure.steps.map((step) => ({ ...step })), agency: measure.agency,
       apply_url: measure.apply_url, timing: measure.timing, source_url: measure.source_url,
@@ -131,6 +133,17 @@ export function MeasureEditor() {
         {form.scope === 'regional' && <label className="block text-sm font-semibold">Регион<select value={form.region_id || 'vladimir'} onChange={(event) => setText('region_id', event.target.value)} className={inputClass}>{REGIONS.map((region) => <option key={region.id} value={region.id}>{region.name}</option>)}</select></label>}
         {form.scope === 'regional' && <label className="block text-sm font-semibold">Населённый пункт, если мера действует только там<input value={form.locality} onChange={(event) => setText('locality', event.target.value)} className={inputClass} maxLength={100} placeholder="Например: Калуга. Оставьте пустым для всей области." /></label>}
         <fieldset className="rounded-xl border border-[#d4d4d4] p-4"><legend className="px-1 text-sm font-semibold">Целевые группы</legend><div className="grid gap-2 sm:grid-cols-2">{AUDIENCES.map(([id, title]) => <label key={id} className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={form.audiences.includes(id)} onChange={(event) => setForm((current) => ({ ...current, audiences: event.target.checked ? [...current.audiences, id] : current.audiences.filter((item) => item !== id) }))} className="h-5 w-5 accent-[#2c5f8d]" />{title}</label>)}</div></fieldset>
+        <fieldset className="rounded-xl border border-[#d4d4d4] p-4"><legend className="px-1 text-sm font-semibold">Правила первичного подбора</legend>
+          <p className="mb-3 text-xs font-normal text-[#525252]">Заполняйте только условия, подтверждённые официальным источником. Остальные условия останутся для проверки перед обращением.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm font-semibold">Родство для группы «Член семьи»<select className={inputClass} value={form.match_rules?.family_relationship || ''} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, family_relationship: event.target.value ? event.target.value as 'spouse' : undefined } }))}><option value="">Любое</option><option value="spouse">Супруг или супруга</option></select></label>
+            <label className="text-sm font-semibold">Группа инвалидности участника для семьи<select className={inputClass} value={form.match_rules?.participant_disability?.join(',') || ''} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, participant_disability: event.target.value ? event.target.value.split(',') as ('I' | 'II' | 'III')[] : undefined } }))}><option value="">Не требуется</option><option value="I,II">I или II</option><option value="I">I</option><option value="II">II</option><option value="III">III</option></select></label>
+            <label className="text-sm font-semibold">Не менее детей<select className={inputClass} value={form.match_rules?.min_children || ''} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, min_children: event.target.value ? Number(event.target.value) : undefined } }))}><option value="">Без ограничения</option><option value="3">3</option></select></label>
+            <label className="text-sm font-semibold">Жилищная ситуация<select className={inputClass} value={form.match_rules?.housing || ''} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, housing: event.target.value ? event.target.value as 'own-home' : undefined } }))}><option value="">Любая</option><option value="own-home">Свой частный дом</option></select></label>
+          </div>
+          <label className="mt-3 flex gap-2 text-sm"><input type="checkbox" checked={!!form.match_rules?.requires_award} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, requires_award: event.target.checked } }))} />Нужна государственная награда — показать напоминание о проверке</label>
+          <label className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={!!form.match_rules?.requires_veteran_card} onChange={(event) => setForm((current) => ({ ...current, match_rules: { ...current.match_rules, requires_veteran_card: event.target.checked } }))} />Нужно удостоверение ветерана — предупредить при оформлении статуса</label>
+        </fieldset>
         <label className="block text-sm font-semibold">Краткое описание<textarea value={form.summary} onChange={(event) => setText('summary', event.target.value)} className={textareaClass} /></label>
         <label className="block text-sm font-semibold">Кому положено и при каких условиях<textarea value={form.eligibility} onChange={(event) => setText('eligibility', event.target.value)} className={textareaClass} /></label>
         <label className="block text-sm font-semibold">Исключения и ограничения<textarea value={form.exclusions} onChange={(event) => setText('exclusions', event.target.value)} className={textareaClass} /></label>

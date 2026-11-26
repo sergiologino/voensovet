@@ -5,15 +5,15 @@ import { normalizeMeasure } from '../measures.js';
 export const publicMeasuresRouter = express.Router();
 export const adminMeasuresRouter = express.Router();
 
-const FIELDS = ['title', 'topic', 'scope', 'region_id', 'locality', 'audiences', 'summary', 'eligibility', 'exclusions', 'documents', 'steps', 'agency', 'apply_url', 'timing', 'source_url', 'source_checked_at', 'date_end'];
-const fieldValues = (measure) => FIELDS.map((field) => ['audiences', 'documents', 'steps'].includes(field) ? JSON.stringify(measure[field]) : measure[field]);
+const FIELDS = ['title', 'topic', 'scope', 'region_id', 'locality', 'audiences', 'match_rules', 'summary', 'eligibility', 'exclusions', 'documents', 'steps', 'agency', 'apply_url', 'timing', 'source_url', 'source_checked_at', 'date_end'];
+const fieldValues = (measure) => FIELDS.map((field) => ['audiences', 'match_rules', 'documents', 'steps'].includes(field) ? JSON.stringify(measure[field]) : measure[field]);
 
 publicMeasuresRouter.get('/', async (req, res, next) => {
   try {
     const regionId = typeof req.query.regionId === 'string' && /^[a-z][a-z_]{1,40}$/.test(req.query.regionId) ? req.query.regionId : null;
     const locality = typeof req.query.locality === 'string' ? req.query.locality.trim().slice(0, 100) : '';
     const result = await pool.query(
-      `SELECT id, title, topic, scope, region_id, locality, audiences, summary, eligibility, exclusions,
+    `SELECT id, title, topic, scope, region_id, locality, audiences, match_rules, summary, eligibility, exclusions,
               documents, steps, agency, apply_url, timing, source_url, source_checked_at, date_end, published_at
        FROM benefit_measures
        WHERE status = 'published' AND (scope = 'federal' OR region_id = $1)

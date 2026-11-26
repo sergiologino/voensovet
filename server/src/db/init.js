@@ -300,6 +300,7 @@ async function createTables() {
       region_id VARCHAR(40),
       locality TEXT NOT NULL DEFAULT '',
       audiences JSONB NOT NULL DEFAULT '[]'::jsonb,
+      match_rules JSONB NOT NULL DEFAULT '{}'::jsonb,
       summary TEXT NOT NULL DEFAULT '',
       eligibility TEXT NOT NULL DEFAULT '',
       exclusions TEXT NOT NULL DEFAULT '',
@@ -324,9 +325,19 @@ async function createTables() {
     )
   `);
   await pool.query("ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS locality TEXT NOT NULL DEFAULT ''");
+  await pool.query("ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS match_rules JSONB NOT NULL DEFAULT '{}'::jsonb");
   await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS date_end DATE');
   await pool.query('ALTER TABLE benefit_measures ADD COLUMN IF NOT EXISTS source_key TEXT');
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_benefit_measures_source_key ON benefit_measures (source_key)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS navigator_profiles (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    audience VARCHAR(30) NOT NULL,
+    disability VARCHAR(10) NOT NULL,
+    relationship VARCHAR(20) NOT NULL,
+    children_count INTEGER NOT NULL,
+    housing VARCHAR(30) NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_benefit_measures_public
     ON benefit_measures (status, region_id, topic)
@@ -347,6 +358,10 @@ async function createTables() {
         measure.exclusions, JSON.stringify(measure.documents), JSON.stringify(measure.steps),
         measure.agency, measure.apply_url, measure.timing, measure.source_url,
         measure.source_checked_at, measure.date_end]
+    );
+    if (initial.match_rules) await pool.query(
+      `UPDATE benefit_measures SET match_rules = $1 WHERE source_key = $2 AND updated_by IS NULL AND match_rules = '{}'::jsonb`,
+      [JSON.stringify(initial.match_rules), initial.source_key]
     );
   }
   console.log('🎉 All tables and migrations completed successfully!');
