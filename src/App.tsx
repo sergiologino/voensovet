@@ -87,7 +87,6 @@ function AppContent() {
       };
       setCurrentPage(routes[hash] || 'home');
     };
-    handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);

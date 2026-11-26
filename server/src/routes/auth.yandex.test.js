@@ -59,4 +59,21 @@ describe('Yandex OAuth', () => {
     expect(post.mock.calls[0][1]).toBeInstanceOf(URLSearchParams);
     expect(post.mock.calls[0][1].get('client_id')).toBe('client-id');
   });
+
+  it('returns callback errors to the visible SPA route and logs a safe failure stage', async () => {
+    process.env.YANDEX_CLIENT_ID = 'client-id';
+    process.env.YANDEX_CLIENT_SECRET = 'client-secret';
+    post.mockRejectedValueOnce({ response: { status: 400, data: { error: 'invalid_grant' } } });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await fetch(`${baseUrl}/callback?code=bad-code`, { redirect: 'manual' });
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('https://voensovet.ru/#auth-callback?error=oauth_failed');
+      expect(log).toHaveBeenCalledWith('Yandex OAuth failed', {
+        stage: 'token_exchange', httpStatus: 400, providerCode: 'invalid_grant', databaseCode: undefined
+      });
+    } finally {
+      log.mockRestore();
+    }
+  });
 });

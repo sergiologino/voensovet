@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'server/src/**/*.test.js'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'server/src/**/*.test.js'],
   },
   build: {
     rollupOptions: {

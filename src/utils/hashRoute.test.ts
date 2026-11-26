@@ -10,6 +10,7 @@ describe('OAuth callback hash route', () => {
 
   it('does not treat an error or empty fragment as a token', () => {
     expect(oauthTokenFromHash('#auth-callback?error=oauth_failed')).toBeNull();
+    expect(pageFromHash('#auth-callback?error=oauth_failed')).toBe('auth-callback');
     expect(pageFromHash('')).toBe('');
   });
 });

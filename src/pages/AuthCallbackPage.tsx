@@ -15,12 +15,13 @@ export function AuthCallbackPage() {
     if (token) {
       localStorage.setItem('token', token);
       refreshUser().then(() => {
-        window.history.replaceState({}, document.title, window.location.pathname);
         if (localStorage.getItem('token')) window.location.hash = '#profile';
-        else setError(true);
+        else {
+          window.history.replaceState({}, document.title, `${window.location.pathname}#auth-callback?error=session_failed`);
+          setError(true);
+        }
       });
     } else {
-      window.history.replaceState({}, document.title, window.location.pathname);
       setError(true);
     }
   }, [refreshUser]);

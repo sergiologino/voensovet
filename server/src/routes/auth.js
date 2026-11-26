@@ -280,6 +280,7 @@ router.get('/yandex', (req, res) => {
 router.get('/yandex/callback', async (req, res, next) => {
   const frontendUrl = process.env.FRONTEND_URL?.trim().replace(/\/+$/, '');
   if (!frontendUrl) return res.status(503).json({ error: 'Адрес сайта не настроен' });
+  let stage = 'authorization';
   try {
     const { code } = req.query;
 
@@ -288,6 +289,7 @@ router.get('/yandex/callback', async (req, res, next) => {
     }
 
     // Обмениваем код на токен
+    stage = 'token_exchange';
     const tokenResponse = await axios.post('https://oauth.yandex.ru/token', new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -300,6 +302,7 @@ router.get('/yandex/callback', async (req, res, next) => {
     const { access_token } = tokenResponse.data;
 
     // Получаем информацию о пользователе
+    stage = 'user_info';
     const userInfoResponse = await axios.get('https://login.yandex.ru/info', {
       headers: { Authorization: `OAuth ${access_token}` }
     });
@@ -308,11 +311,13 @@ router.get('/yandex/callback', async (req, res, next) => {
     const yandexId = yandexUser.id;
 
     // Ищем или создаем пользователя
+    stage = 'user_lookup';
     let userResult = await pool.query('SELECT * FROM users WHERE yandex_id = $1', [yandexId]);
 
     let user;
     if (userResult.rows.length === 0) {
       // Создаем нового пользователя
+      stage = 'user_create';
       const result = await pool.query(
         `INSERT INTO users (email, full_name, yandex_id, provider)
          VALUES ($1, $2, $3, 'yandex')
@@ -332,6 +337,7 @@ router.get('/yandex/callback', async (req, res, next) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    stage = 'session_create';
     await pool.query(
       'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [user.id, token, expiresAt]
@@ -340,7 +346,12 @@ router.get('/yandex/callback', async (req, res, next) => {
     // Редирект на фронтенд с токеном
     res.redirect(`${frontendUrl}/#auth-callback?token=${encodeURIComponent(token)}`);
   } catch (error) {
-    console.error('Yandex OAuth failed');
+    console.error('Yandex OAuth failed', {
+      stage,
+      httpStatus: error.response?.status,
+      providerCode: error.response?.data?.error,
+      databaseCode: error.code
+    });
     res.redirect(`${frontendUrl}/#auth-callback?error=oauth_failed`);
   }
 });
