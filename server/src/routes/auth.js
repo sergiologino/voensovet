@@ -262,31 +262,38 @@ router.get('/me', authenticateToken, async (req, res) => {
 
 // OAuth Yandex - начало авторизации
 router.get('/yandex', (req, res) => {
-  const clientId = process.env.YANDEX_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.YANDEX_REDIRECT_URI);
-  const state = req.query.state || 'default';
-  
-  const yandexAuthUrl = `https://oauth.yandex.ru/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
-  
-  res.redirect(yandexAuthUrl);
+  const clientId = process.env.YANDEX_CLIENT_ID?.trim();
+  const clientSecret = process.env.YANDEX_CLIENT_SECRET?.trim();
+  const redirectUri = process.env.YANDEX_REDIRECT_URI?.trim();
+  const frontendUrl = process.env.FRONTEND_URL?.trim();
+  if (!clientId || !clientSecret || !redirectUri || !frontendUrl) {
+    return res.status(503).json({ error: 'Вход через Яндекс не настроен. Обратитесь к администратору.' });
+  }
+  const url = new URL('https://oauth.yandex.ru/authorize');
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('redirect_uri', redirectUri);
+  res.redirect(url.toString());
 });
 
 // OAuth Yandex - callback
 router.get('/yandex/callback', async (req, res, next) => {
+  const frontendUrl = process.env.FRONTEND_URL?.trim().replace(/\/+$/, '');
+  if (!frontendUrl) return res.status(503).json({ error: 'Адрес сайта не настроен' });
   try {
-    const { code, state } = req.query;
+    const { code } = req.query;
 
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+      return res.redirect(`${frontendUrl}/#auth-callback?error=oauth_failed`);
     }
 
     // Обмениваем код на токен
-    const tokenResponse = await axios.post('https://oauth.yandex.ru/token', {
+    const tokenResponse = await axios.post('https://oauth.yandex.ru/token', new URLSearchParams({
       grant_type: 'authorization_code',
       code,
       client_id: process.env.YANDEX_CLIENT_ID,
       client_secret: process.env.YANDEX_CLIENT_SECRET
-    }, {
+    }), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
@@ -331,10 +338,10 @@ router.get('/yandex/callback', async (req, res, next) => {
     );
 
     // Редирект на фронтенд с токеном
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    res.redirect(`${frontendUrl}/#auth-callback?token=${encodeURIComponent(token)}`);
   } catch (error) {
     console.error('Yandex OAuth failed');
-    res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+    res.redirect(`${frontendUrl}/#auth-callback?error=oauth_failed`);
   }
 });
 

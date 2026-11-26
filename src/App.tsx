@@ -18,10 +18,11 @@ import { RegionProvider } from './context/RegionContext';
 import { AuthProvider } from './context/AuthContext';
 import { PageTracker } from './components/PageTracker';
 import { AppRouteSEO } from './components/seo/AppRouteSEO';
+import { pageFromHash } from './utils/hashRoute';
 
 function getInitialPageFromHash() {
   const rawHash = window.location.hash || '';
-  const hash = rawHash.replace(/^#/, '');
+  const hash = pageFromHash(rawHash);
 
   // "Gateway" logic:
   // - If user lands on root (empty hash), show entry landing first time.
